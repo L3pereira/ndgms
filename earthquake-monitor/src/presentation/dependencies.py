@@ -2,6 +2,7 @@ from typing import Annotated
 
 from fastapi import Depends
 
+from src.application.events.event_publisher import EventPublisher
 from src.application.use_cases.create_earthquake import CreateEarthquakeUseCase
 from src.domain.repositories.earthquake_repository import EarthquakeRepository
 
@@ -40,7 +41,14 @@ def get_earthquake_repository() -> EarthquakeRepository:
     return MockEarthquakeRepository()
 
 
+def get_event_publisher() -> EventPublisher:
+    from .main import get_event_publisher
+
+    return get_event_publisher()
+
+
 def get_create_earthquake_use_case(
     repository: Annotated[EarthquakeRepository, Depends(get_earthquake_repository)],
+    event_publisher: Annotated[EventPublisher, Depends(get_event_publisher)],
 ) -> CreateEarthquakeUseCase:
-    return CreateEarthquakeUseCase(repository)
+    return CreateEarthquakeUseCase(repository, event_publisher)
