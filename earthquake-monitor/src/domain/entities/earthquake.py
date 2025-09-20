@@ -1,5 +1,5 @@
 from dataclasses import dataclass, field
-from datetime import datetime
+from datetime import datetime, timezone
 from uuid import uuid4
 
 from .location import Location
@@ -16,7 +16,7 @@ class Earthquake:
     _is_reviewed: bool = field(default=False, init=False)
 
     def __post_init__(self):
-        if self.occurred_at > datetime.now(datetime.UTC):
+        if self.occurred_at > datetime.now(timezone.utc):
             raise ValueError("Earthquake occurrence time cannot be in the future")
 
     @property

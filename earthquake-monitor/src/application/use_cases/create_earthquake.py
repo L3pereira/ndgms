@@ -1,4 +1,4 @@
-from datetime import datetime
+from datetime import datetime, timezone
 
 from src.domain.entities.earthquake import Earthquake
 from src.domain.entities.location import Location
@@ -22,7 +22,7 @@ class CreateEarthquakeRequest:
         self.depth = depth
         self.magnitude_value = magnitude_value
         self.magnitude_scale = magnitude_scale
-        self.occurred_at = occurred_at or datetime.now(datetime.UTC)
+        self.occurred_at = occurred_at or datetime.now(timezone.utc)
         self.source = source
 
 

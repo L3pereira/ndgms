@@ -1,4 +1,4 @@
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 
 from src.domain.entities.earthquake import Earthquake
 from src.domain.entities.location import Location
@@ -9,7 +9,7 @@ class TestEarthquake:
     def test_create_earthquake(self):
         location = Location(latitude=37.7749, longitude=-122.4194, depth=10.5)
         magnitude = Magnitude(value=5.5)
-        occurred_at = datetime.now(datetime.UTC) - timedelta(hours=1)
+        occurred_at = datetime.now(timezone.utc) - timedelta(hours=1)
 
         earthquake = Earthquake(
             location=location, magnitude=magnitude, occurred_at=occurred_at
@@ -24,7 +24,7 @@ class TestEarthquake:
     def test_mark_as_reviewed(self):
         location = Location(latitude=37.7749, longitude=-122.4194, depth=10.5)
         magnitude = Magnitude(value=5.5)
-        occurred_at = datetime.now(datetime.UTC) - timedelta(hours=1)
+        occurred_at = datetime.now(timezone.utc) - timedelta(hours=1)
 
         earthquake = Earthquake(
             location=location, magnitude=magnitude, occurred_at=occurred_at
@@ -36,7 +36,7 @@ class TestEarthquake:
     def test_calculate_affected_radius(self):
         location = Location(latitude=37.7749, longitude=-122.4194, depth=20.0)
         magnitude = Magnitude(value=6.0)
-        occurred_at = datetime.now(datetime.UTC) - timedelta(hours=1)
+        occurred_at = datetime.now(timezone.utc) - timedelta(hours=1)
 
         earthquake = Earthquake(
             location=location, magnitude=magnitude, occurred_at=occurred_at
