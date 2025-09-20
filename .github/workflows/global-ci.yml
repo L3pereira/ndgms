@@ -12,10 +12,6 @@ jobs:
     runs-on: ubuntu-latest
     outputs:
       earthquake-monitor: ${{ steps.changes.outputs.earthquake-monitor }}
-      hurricane-monitor: ${{ steps.changes.outputs.hurricane-monitor }}
-      frontend-service: ${{ steps.changes.outputs.frontend-service }}
-      api-gateway: ${{ steps.changes.outputs.api-gateway }}
-      data-pipeline: ${{ steps.changes.outputs.data-pipeline }}
       global-config: ${{ steps.changes.outputs.global-config }}
     steps:
       - name: Checkout code
@@ -28,14 +24,6 @@ jobs:
           filters: |
             earthquake-monitor:
               - 'earthquake-monitor/**'
-            hurricane-monitor:
-              - 'hurricane-monitor/**'
-            frontend-service:
-              - 'frontend-service/**'
-            api-gateway:
-              - 'api-gateway/**'
-            data-pipeline:
-              - 'data-pipeline/**'
             global-config:
               - '.github/**'
               - '.pre-commit-config.yaml'
@@ -128,149 +116,11 @@ jobs:
           flags: ${{ matrix.service }}
           name: ${{ matrix.service }}-coverage
 
-  # Java services CI (when implemented)
-  java-services:
-    needs: [detect-changes, quality-gates]
-    if: needs.detect-changes.outputs.hurricane-monitor == 'true' || needs.detect-changes.outputs.global-config == 'true'
-    runs-on: ubuntu-latest
-    strategy:
-      matrix:
-        service: [hurricane-monitor]
-        java-version: ['21']
-
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-
-      - name: Set up Java ${{ matrix.java-version }}
-        uses: actions/setup-java@v3
-        with:
-          java-version: ${{ matrix.java-version }}
-          distribution: 'temurin'
-
-      - name: Cache Maven dependencies
-        uses: actions/cache@v3
-        with:
-          path: ~/.m2
-          key: m2-${{ runner.os }}-${{ hashFiles('**/pom.xml') }}
-
-      - name: Build and test
-        working-directory: ${{ matrix.service }}
-        run: |
-          if [ -f "pom.xml" ]; then
-            ./mvnw clean compile test
-            ./mvnw checkstyle:check
-          else
-            echo "Service ${{ matrix.service }} not implemented yet"
-          fi
-
-  # TypeScript/Node.js services CI (when implemented)
-  typescript-services:
-    needs: [detect-changes, quality-gates]
-    if: needs.detect-changes.outputs.frontend-service == 'true' || needs.detect-changes.outputs.global-config == 'true'
-    runs-on: ubuntu-latest
-    strategy:
-      matrix:
-        service: [frontend-service]
-        node-version: ['20']
-
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-
-      - name: Set up Node.js ${{ matrix.node-version }}
-        uses: actions/setup-node@v3
-        with:
-          node-version: ${{ matrix.node-version }}
-          cache: 'npm'
-          cache-dependency-path: ${{ matrix.service }}/package-lock.json
-
-      - name: Install dependencies and test
-        working-directory: ${{ matrix.service }}
-        run: |
-          if [ -f "package.json" ]; then
-            npm ci
-            npm run test
-            npm run build
-          else
-            echo "Service ${{ matrix.service }} not implemented yet"
-          fi
-
-  # Go services CI (when implemented)
-  go-services:
-    needs: [detect-changes, quality-gates]
-    if: needs.detect-changes.outputs.api-gateway == 'true' || needs.detect-changes.outputs.global-config == 'true'
-    runs-on: ubuntu-latest
-    strategy:
-      matrix:
-        service: [api-gateway]
-        go-version: ['1.21']
-
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-
-      - name: Set up Go ${{ matrix.go-version }}
-        uses: actions/setup-go@v4
-        with:
-          go-version: ${{ matrix.go-version }}
-
-      - name: Build and test
-        working-directory: ${{ matrix.service }}
-        run: |
-          if [ -f "go.mod" ]; then
-            go mod download
-            go build ./...
-            go test ./...
-            go vet ./...
-          else
-            echo "Service ${{ matrix.service }} not implemented yet"
-          fi
-
-  # Rust services CI (when implemented)
-  rust-services:
-    needs: [detect-changes, quality-gates]
-    if: needs.detect-changes.outputs.data-pipeline == 'true' || needs.detect-changes.outputs.global-config == 'true'
-    runs-on: ubuntu-latest
-    strategy:
-      matrix:
-        service: [data-pipeline]
-
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-
-      - name: Set up Rust
-        uses: actions-rs/toolchain@v1
-        with:
-          toolchain: stable
-          components: rustfmt, clippy
-
-      - name: Cache Cargo dependencies
-        uses: actions/cache@v3
-        with:
-          path: |
-            ~/.cargo/registry
-            ~/.cargo/git
-            target
-          key: cargo-${{ runner.os }}-${{ hashFiles('**/Cargo.lock') }}
-
-      - name: Build and test
-        working-directory: ${{ matrix.service }}
-        run: |
-          if [ -f "Cargo.toml" ]; then
-            cargo build --verbose
-            cargo test --verbose
-            cargo clippy -- -D warnings
-            cargo fmt -- --check
-          else
-            echo "Service ${{ matrix.service }} not implemented yet"
-          fi
 
   # Docker build verification
   docker-build:
     needs: [detect-changes, quality-gates]
-    if: always() && needs.quality-gates.result == 'success'
+    if: (needs.detect-changes.outputs.earthquake-monitor == 'true' || needs.detect-changes.outputs.global-config == 'true') && needs.quality-gates.result == 'success'
     runs-on: ubuntu-latest
     strategy:
       matrix:
@@ -296,7 +146,7 @@ jobs:
   # Deployment (only on main branch)
   deploy:
     if: github.ref == 'refs/heads/main' && github.event_name == 'push'
-    needs: [python-services, java-services, typescript-services, go-services, rust-services, docker-build]
+    needs: [python-services, docker-build]
     runs-on: ubuntu-latest
     steps:
       - name: Checkout code
