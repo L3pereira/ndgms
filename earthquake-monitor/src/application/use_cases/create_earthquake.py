@@ -22,7 +22,7 @@ class CreateEarthquakeRequest:
         self.depth = depth
         self.magnitude_value = magnitude_value
         self.magnitude_scale = magnitude_scale
-        self.occurred_at = occurred_at or datetime.utcnow()
+        self.occurred_at = occurred_at or datetime.now(datetime.UTC)
         self.source = source
 
 

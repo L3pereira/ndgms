@@ -16,7 +16,7 @@ class Earthquake:
     _is_reviewed: bool = field(default=False, init=False)
 
     def __post_init__(self):
-        if self.occurred_at > datetime.utcnow():
+        if self.occurred_at > datetime.now(datetime.UTC):
             raise ValueError("Earthquake occurrence time cannot be in the future")
 
     @property
