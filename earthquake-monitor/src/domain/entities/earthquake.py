@@ -1,6 +1,5 @@
 from dataclasses import dataclass, field
 from datetime import datetime
-from typing import Optional
 from uuid import uuid4
 
 from .location import Location
@@ -34,8 +33,9 @@ class Earthquake:
 
     def requires_immediate_alert(self) -> bool:
         """Check if earthquake requires immediate alert."""
-        return (self.magnitude.is_significant() and
-                self.location.is_near_populated_area())
+        return (
+            self.magnitude.is_significant() and self.location.is_near_populated_area()
+        )
 
     def calculate_affected_radius_km(self) -> float:
         """Calculate the radius of areas potentially affected by the earthquake."""
@@ -54,5 +54,5 @@ class Earthquake:
             "requires_immediate_alert": self.requires_immediate_alert(),
             "magnitude_description": self.magnitude.get_description(),
             "near_populated_area": self.location.is_near_populated_area(),
-            "is_significant": self.magnitude.is_significant()
+            "is_significant": self.magnitude.is_significant(),
         }

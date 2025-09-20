@@ -6,13 +6,14 @@ This script fetches earthquake data from the USGS API and ingests it into the sy
 """
 
 import asyncio
-import httpx
 from datetime import datetime, timedelta
-from typing import List, Dict, Any
+from typing import Any, Dict, List
+
+import httpx
 
 from src.application.use_cases.create_earthquake import (
-    CreateEarthquakeUseCase,
     CreateEarthquakeRequest,
+    CreateEarthquakeUseCase,
 )
 from src.presentation.dependencies import get_earthquake_repository
 
@@ -51,7 +52,9 @@ class EarthquakeIngestionService:
     def __init__(self, use_case: CreateEarthquakeUseCase):
         self.use_case = use_case
 
-    async def ingest_earthquakes(self, earthquakes_data: List[Dict[str, Any]]) -> Dict[str, int]:
+    async def ingest_earthquakes(
+        self, earthquakes_data: List[Dict[str, Any]]
+    ) -> Dict[str, int]:
         """Ingest earthquake data into the system."""
         created = 0
         errors = 0

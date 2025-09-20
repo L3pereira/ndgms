@@ -1,6 +1,6 @@
 from abc import ABC, abstractmethod
-from typing import List, Optional
 from datetime import datetime
+from typing import List, Optional
 
 from ..entities.earthquake import Earthquake
 
@@ -25,28 +25,21 @@ class EarthquakeRepository(ABC):
 
     @abstractmethod
     async def find_by_magnitude_range(
-        self,
-        min_magnitude: float,
-        max_magnitude: Optional[float] = None
+        self, min_magnitude: float, max_magnitude: Optional[float] = None
     ) -> List[Earthquake]:
         """Find earthquakes within a magnitude range."""
         pass
 
     @abstractmethod
     async def find_by_time_range(
-        self,
-        start_time: datetime,
-        end_time: datetime
+        self, start_time: datetime, end_time: datetime
     ) -> List[Earthquake]:
         """Find earthquakes within a time range."""
         pass
 
     @abstractmethod
     async def find_by_location_radius(
-        self,
-        latitude: float,
-        longitude: float,
-        radius_km: float
+        self, latitude: float, longitude: float, radius_km: float
     ) -> List[Earthquake]:
         """Find earthquakes within a radius of a location."""
         pass

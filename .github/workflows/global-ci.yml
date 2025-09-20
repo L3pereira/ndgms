@@ -1,0 +1,319 @@
+name: Global CI/CD Pipeline
+
+on:
+  push:
+    branches: [ main, develop ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  # Detect which services have changes
+  detect-changes:
+    runs-on: ubuntu-latest
+    outputs:
+      earthquake-monitor: ${{ steps.changes.outputs.earthquake-monitor }}
+      hurricane-monitor: ${{ steps.changes.outputs.hurricane-monitor }}
+      frontend-service: ${{ steps.changes.outputs.frontend-service }}
+      api-gateway: ${{ steps.changes.outputs.api-gateway }}
+      data-pipeline: ${{ steps.changes.outputs.data-pipeline }}
+      global-config: ${{ steps.changes.outputs.global-config }}
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Detect changes
+        uses: dorny/paths-filter@v2
+        id: changes
+        with:
+          filters: |
+            earthquake-monitor:
+              - 'earthquake-monitor/**'
+            hurricane-monitor:
+              - 'hurricane-monitor/**'
+            frontend-service:
+              - 'frontend-service/**'
+            api-gateway:
+              - 'api-gateway/**'
+            data-pipeline:
+              - 'data-pipeline/**'
+            global-config:
+              - '.github/**'
+              - '.pre-commit-config.yaml'
+              - 'README.md'
+
+  # Global quality gates - always run
+  quality-gates:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Python for pre-commit
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.11'
+
+      - name: Install pre-commit
+        run: pip install pre-commit
+
+      - name: Run global pre-commit hooks
+        run: pre-commit run --all-files
+
+  # Python services CI
+  python-services:
+    needs: [detect-changes, quality-gates]
+    if: needs.detect-changes.outputs.earthquake-monitor == 'true' || needs.detect-changes.outputs.global-config == 'true'
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        service: [earthquake-monitor]
+        python-version: ['3.11']
+
+    services:
+      postgres:
+        image: postgis/postgis:15-3.3
+        env:
+          POSTGRES_PASSWORD: password
+          POSTGRES_DB: test_db
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+        ports:
+          - 5432:5432
+
+      redis:
+        image: redis:7-alpine
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+        ports:
+          - 6379:6379
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Python ${{ matrix.python-version }}
+        uses: actions/setup-python@v4
+        with:
+          python-version: ${{ matrix.python-version }}
+
+      - name: Cache pip dependencies
+        uses: actions/cache@v3
+        with:
+          path: ~/.cache/pip
+          key: pip-${{ runner.os }}-${{ matrix.python-version }}-${{ hashFiles('**/requirements.txt') }}
+
+      - name: Install dependencies
+        working-directory: ${{ matrix.service }}
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+
+      - name: Run tests
+        working-directory: ${{ matrix.service }}
+        run: pytest
+        env:
+          DATABASE_URL: postgresql://postgres:password@localhost:5432/test_db
+          REDIS_URL: redis://localhost:6379
+
+      - name: Upload coverage
+        uses: codecov/codecov-action@v3
+        with:
+          file: ${{ matrix.service }}/.coverage
+          flags: ${{ matrix.service }}
+          name: ${{ matrix.service }}-coverage
+
+  # Java services CI (when implemented)
+  java-services:
+    needs: [detect-changes, quality-gates]
+    if: needs.detect-changes.outputs.hurricane-monitor == 'true' || needs.detect-changes.outputs.global-config == 'true'
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        service: [hurricane-monitor]
+        java-version: ['21']
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Java ${{ matrix.java-version }}
+        uses: actions/setup-java@v3
+        with:
+          java-version: ${{ matrix.java-version }}
+          distribution: 'temurin'
+
+      - name: Cache Maven dependencies
+        uses: actions/cache@v3
+        with:
+          path: ~/.m2
+          key: m2-${{ runner.os }}-${{ hashFiles('**/pom.xml') }}
+
+      - name: Build and test
+        working-directory: ${{ matrix.service }}
+        run: |
+          if [ -f "pom.xml" ]; then
+            ./mvnw clean compile test
+            ./mvnw checkstyle:check
+          else
+            echo "Service ${{ matrix.service }} not implemented yet"
+          fi
+
+  # TypeScript/Node.js services CI (when implemented)
+  typescript-services:
+    needs: [detect-changes, quality-gates]
+    if: needs.detect-changes.outputs.frontend-service == 'true' || needs.detect-changes.outputs.global-config == 'true'
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        service: [frontend-service]
+        node-version: ['20']
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js ${{ matrix.node-version }}
+        uses: actions/setup-node@v3
+        with:
+          node-version: ${{ matrix.node-version }}
+          cache: 'npm'
+          cache-dependency-path: ${{ matrix.service }}/package-lock.json
+
+      - name: Install dependencies and test
+        working-directory: ${{ matrix.service }}
+        run: |
+          if [ -f "package.json" ]; then
+            npm ci
+            npm run test
+            npm run build
+          else
+            echo "Service ${{ matrix.service }} not implemented yet"
+          fi
+
+  # Go services CI (when implemented)
+  go-services:
+    needs: [detect-changes, quality-gates]
+    if: needs.detect-changes.outputs.api-gateway == 'true' || needs.detect-changes.outputs.global-config == 'true'
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        service: [api-gateway]
+        go-version: ['1.21']
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Go ${{ matrix.go-version }}
+        uses: actions/setup-go@v4
+        with:
+          go-version: ${{ matrix.go-version }}
+
+      - name: Build and test
+        working-directory: ${{ matrix.service }}
+        run: |
+          if [ -f "go.mod" ]; then
+            go mod download
+            go build ./...
+            go test ./...
+            go vet ./...
+          else
+            echo "Service ${{ matrix.service }} not implemented yet"
+          fi
+
+  # Rust services CI (when implemented)
+  rust-services:
+    needs: [detect-changes, quality-gates]
+    if: needs.detect-changes.outputs.data-pipeline == 'true' || needs.detect-changes.outputs.global-config == 'true'
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        service: [data-pipeline]
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Rust
+        uses: actions-rs/toolchain@v1
+        with:
+          toolchain: stable
+          components: rustfmt, clippy
+
+      - name: Cache Cargo dependencies
+        uses: actions/cache@v3
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+            target
+          key: cargo-${{ runner.os }}-${{ hashFiles('**/Cargo.lock') }}
+
+      - name: Build and test
+        working-directory: ${{ matrix.service }}
+        run: |
+          if [ -f "Cargo.toml" ]; then
+            cargo build --verbose
+            cargo test --verbose
+            cargo clippy -- -D warnings
+            cargo fmt -- --check
+          else
+            echo "Service ${{ matrix.service }} not implemented yet"
+          fi
+
+  # Docker build verification
+  docker-build:
+    needs: [detect-changes, quality-gates]
+    if: always() && needs.quality-gates.result == 'success'
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        service: [earthquake-monitor]
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Build Docker image
+        uses: docker/build-push-action@v5
+        with:
+          context: ./${{ matrix.service }}
+          file: ./${{ matrix.service }}/docker/Dockerfile
+          push: false
+          tags: ${{ matrix.service }}:latest
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+  # Deployment (only on main branch)
+  deploy:
+    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+    needs: [python-services, java-services, typescript-services, go-services, rust-services, docker-build]
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Deploy to staging
+        run: |
+          echo "🚀 Deploying to staging environment..."
+          # Add actual deployment logic here
+
+      - name: Run integration tests
+        run: |
+          echo "🧪 Running integration tests..."
+          # Add integration test logic here
+
+      - name: Deploy to production
+        if: success()
+        run: |
+          echo "🌟 Deploying to production environment..."
+          # Add production deployment logic here

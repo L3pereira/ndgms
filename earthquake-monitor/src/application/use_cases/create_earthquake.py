@@ -1,5 +1,4 @@
 from datetime import datetime
-from typing import Protocol
 
 from src.domain.entities.earthquake import Earthquake
 from src.domain.entities.location import Location

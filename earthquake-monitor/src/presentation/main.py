@@ -1,8 +1,6 @@
-from fastapi import FastAPI, Depends
-from typing import Annotated
+from fastapi import FastAPI
 
 from .routers import earthquakes
-from .dependencies import get_earthquake_repository
 
 app = FastAPI(
     title="Earthquake Monitor API",

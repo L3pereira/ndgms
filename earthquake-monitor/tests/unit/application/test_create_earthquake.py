@@ -1,10 +1,11 @@
-import pytest
 from datetime import datetime
-from unittest.mock import Mock, AsyncMock
+from unittest.mock import AsyncMock, Mock
+
+import pytest
 
 from src.application.use_cases.create_earthquake import (
-    CreateEarthquakeUseCase,
     CreateEarthquakeRequest,
+    CreateEarthquakeUseCase,
 )
 from src.domain.repositories.earthquake_repository import EarthquakeRepository
 

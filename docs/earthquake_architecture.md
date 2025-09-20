@@ -92,11 +92,11 @@ class Location:
     latitude: float
     longitude: float
     depth: float
-    
+
     def distance_to(self, other: 'Location') -> float:
         # Haversine formula implementation
         pass
-    
+
     def is_near_populated_area(self) -> bool:
         # Business logic for proximity checks
         pass
@@ -105,10 +105,10 @@ class Location:
 class Magnitude:
     value: float
     scale: str  # Richter, Moment, etc.
-    
+
     def is_significant(self) -> bool:
         return self.value >= 5.0
-    
+
     def get_alert_level(self) -> str:
         if self.value >= 7.0:
             return "CRITICAL"
@@ -119,7 +119,7 @@ class Magnitude:
         return "LOW"
 
 class Earthquake:
-    def __init__(self, 
+    def __init__(self,
                  earthquake_id: str,
                  location: Location,
                  magnitude: Magnitude,
@@ -131,14 +131,14 @@ class Earthquake:
         self._occurred_at = occurred_at
         self._source = source
         self._is_reviewed = False
-    
+
     def mark_as_reviewed(self) -> None:
         self._is_reviewed = True
-    
+
     def requires_immediate_alert(self) -> bool:
-        return (self._magnitude.is_significant() and 
+        return (self._magnitude.is_significant() and
                 self._location.is_near_populated_area())
-    
+
     def calculate_affected_radius_km(self) -> float:
         # Business logic for impact calculation
         base_radius = self._magnitude.value * 20
@@ -152,7 +152,7 @@ class Earthquake:
 class AlertService:
     def should_trigger_alert(self, earthquake: Earthquake) -> bool:
         return earthquake.requires_immediate_alert()
-    
+
     def calculate_impact_zone(self, earthquake: Earthquake) -> List[Location]:
         # Complex business logic for determining affected areas
         pass
@@ -164,28 +164,28 @@ class AlertService:
 ```python
 # application/use_cases/ingest_earthquake_data.py
 class IngestEarthquakeDataUseCase:
-    def __init__(self, 
+    def __init__(self,
                  earthquake_repo: EarthquakeRepository,
                  event_publisher: EventPublisher):
         self._earthquake_repo = earthquake_repo
         self._event_publisher = event_publisher
-    
+
     async def execute(self, earthquake_data: dict) -> None:
         # Convert external data to domain object
         earthquake = self._create_earthquake_from_data(earthquake_data)
-        
+
         # Check if already exists
         if await self._earthquake_repo.exists(earthquake.id):
             return
-        
+
         # Save to repository
         await self._earthquake_repo.save(earthquake)
-        
+
         # Publish domain event
         await self._event_publisher.publish(
             EarthquakeDetected(earthquake.id, earthquake.occurred_at)
         )
-        
+
         # Check for alerts
         if earthquake.requires_immediate_alert():
             await self._event_publisher.publish(
@@ -201,7 +201,7 @@ class IngestEarthquakeDataUseCase:
 class PostgresEarthquakeRepository(EarthquakeRepository):
     def __init__(self, session: AsyncSession):
         self._session = session
-    
+
     async def save(self, earthquake: Earthquake) -> None:
         # Map domain object to ORM model
         earthquake_model = EarthquakeModel(
@@ -215,17 +215,17 @@ class PostgresEarthquakeRepository(EarthquakeRepository):
             source=earthquake.source,
             is_reviewed=earthquake.is_reviewed
         )
-        
+
         self._session.add(earthquake_model)
         await self._session.commit()
-    
+
     async def find_by_filters(self, filters: EarthquakeFilters) -> List[Earthquake]:
         # Complex query building with PostGIS for geospatial queries
         query = select(EarthquakeModel)
-        
+
         if filters.min_magnitude:
             query = query.where(EarthquakeModel.magnitude >= filters.min_magnitude)
-        
+
         if filters.location_bounds:
             # PostGIS spatial query
             query = query.where(
@@ -234,10 +234,10 @@ class PostgresEarthquakeRepository(EarthquakeRepository):
                     func.ST_MakeEnvelope(*filters.location_bounds, 4326)
                 )
             )
-        
+
         result = await self._session.execute(query)
         models = result.scalars().all()
-        
+
         # Map ORM models back to domain objects
         return [self._map_to_domain(model) for model in models]
 ```
@@ -257,11 +257,11 @@ class EarthquakeDetected:
 class EarthquakeEventHandlers:
     def __init__(self, websocket_manager: WebSocketManager):
         self._websocket_manager = websocket_manager
-    
+
     async def handle_earthquake_detected(self, event: EarthquakeDetected):
         # Notify real-time subscribers
         await self._websocket_manager.broadcast_earthquake_update(event)
-    
+
     async def handle_high_magnitude_alert(self, event: HighMagnitudeAlert):
         # Send urgent notifications
         await self._websocket_manager.broadcast_alert(event)

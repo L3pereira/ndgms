@@ -1,5 +1,5 @@
-import pytest
 from datetime import datetime, timedelta
+
 from src.domain.entities.earthquake import Earthquake
 from src.domain.entities.location import Location
 from src.domain.entities.magnitude import Magnitude
@@ -12,9 +12,7 @@ class TestEarthquake:
         occurred_at = datetime.utcnow() - timedelta(hours=1)
 
         earthquake = Earthquake(
-            location=location,
-            magnitude=magnitude,
-            occurred_at=occurred_at
+            location=location, magnitude=magnitude, occurred_at=occurred_at
         )
 
         assert earthquake.location == location
@@ -29,9 +27,7 @@ class TestEarthquake:
         occurred_at = datetime.utcnow() - timedelta(hours=1)
 
         earthquake = Earthquake(
-            location=location,
-            magnitude=magnitude,
-            occurred_at=occurred_at
+            location=location, magnitude=magnitude, occurred_at=occurred_at
         )
 
         earthquake.mark_as_reviewed()
@@ -43,9 +39,7 @@ class TestEarthquake:
         occurred_at = datetime.utcnow() - timedelta(hours=1)
 
         earthquake = Earthquake(
-            location=location,
-            magnitude=magnitude,
-            occurred_at=occurred_at
+            location=location, magnitude=magnitude, occurred_at=occurred_at
         )
 
         radius = earthquake.calculate_affected_radius_km()

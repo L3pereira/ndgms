@@ -7,7 +7,8 @@ This script initializes the database with required tables and initial data.
 
 import asyncio
 import os
-from sqlalchemy.ext.asyncio import create_async_engine, AsyncSession
+
+from sqlalchemy.ext.asyncio import AsyncSession, create_async_engine
 from sqlalchemy.orm import sessionmaker
 
 # This would be used when we implement real database models
@@ -35,7 +36,7 @@ async def main():
     # Get database URL from environment
     database_url = os.getenv(
         "DATABASE_URL",
-        "postgresql+asyncpg://postgres:password@localhost:5432/earthquake_monitor"
+        "postgresql+asyncpg://postgres:password@localhost:5432/earthquake_monitor",
     )
 
     # Create async engine

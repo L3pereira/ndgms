@@ -1,8 +1,9 @@
 from typing import Annotated
+
 from fastapi import Depends
 
-from src.domain.repositories.earthquake_repository import EarthquakeRepository
 from src.application.use_cases.create_earthquake import CreateEarthquakeUseCase
+from src.domain.repositories.earthquake_repository import EarthquakeRepository
 
 
 # For now, we'll use a mock repository for demonstration
@@ -26,7 +27,9 @@ class MockEarthquakeRepository(EarthquakeRepository):
     async def find_by_time_range(self, start_time, end_time):
         return []
 
-    async def find_by_location_radius(self, latitude: float, longitude: float, radius_km: float):
+    async def find_by_location_radius(
+        self, latitude: float, longitude: float, radius_km: float
+    ):
         return []
 
     async def find_unreviewed(self):
@@ -38,6 +41,6 @@ def get_earthquake_repository() -> EarthquakeRepository:
 
 
 def get_create_earthquake_use_case(
-    repository: Annotated[EarthquakeRepository, Depends(get_earthquake_repository)]
+    repository: Annotated[EarthquakeRepository, Depends(get_earthquake_repository)],
 ) -> CreateEarthquakeUseCase:
     return CreateEarthquakeUseCase(repository)

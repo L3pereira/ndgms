@@ -1,5 +1,6 @@
 from abc import ABC, abstractmethod
 from typing import List
+
 from ..entities.location import Location
 
 
@@ -13,9 +14,7 @@ class PopulationService(ABC):
 
     @abstractmethod
     async def get_affected_population_estimate(
-        self,
-        center: Location,
-        radius_km: float
+        self, center: Location, radius_km: float
     ) -> int:
         """Estimate population affected within a radius."""
         pass
@@ -28,9 +27,9 @@ class PopulationServiceImpl(PopulationService):
         self._populated_areas = populated_areas or [
             (37.7749, -122.4194),  # San Francisco
             (34.0522, -118.2437),  # Los Angeles
-            (40.7128, -74.0060),   # New York
-            (35.6762, 139.6503),   # Tokyo
-            (55.7558, 37.6176),    # Moscow
+            (40.7128, -74.0060),  # New York
+            (35.6762, 139.6503),  # Tokyo
+            (55.7558, 37.6176),  # Moscow
         ]
 
     async def is_near_populated_area(self, location: Location) -> bool:
@@ -42,9 +41,7 @@ class PopulationServiceImpl(PopulationService):
         return False
 
     async def get_affected_population_estimate(
-        self,
-        center: Location,
-        radius_km: float
+        self, center: Location, radius_km: float
     ) -> int:
         """Simple population estimation based on proximity to known areas."""
         total_population = 0

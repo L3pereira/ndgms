@@ -1,5 +1,5 @@
 import pytest
-import math
+
 from src.domain.entities.location import Location
 
 
@@ -11,17 +11,25 @@ class TestLocation:
         assert location.depth == 10.5
 
     def test_invalid_latitude_raises_error(self):
-        with pytest.raises(ValueError, match="Latitude must be between -90 and 90 degrees"):
+        with pytest.raises(
+            ValueError, match="Latitude must be between -90 and 90 degrees"
+        ):
             Location(latitude=95.0, longitude=-122.4194, depth=10.5)
 
-        with pytest.raises(ValueError, match="Latitude must be between -90 and 90 degrees"):
+        with pytest.raises(
+            ValueError, match="Latitude must be between -90 and 90 degrees"
+        ):
             Location(latitude=-95.0, longitude=-122.4194, depth=10.5)
 
     def test_invalid_longitude_raises_error(self):
-        with pytest.raises(ValueError, match="Longitude must be between -180 and 180 degrees"):
+        with pytest.raises(
+            ValueError, match="Longitude must be between -180 and 180 degrees"
+        ):
             Location(latitude=37.7749, longitude=185.0, depth=10.5)
 
-        with pytest.raises(ValueError, match="Longitude must be between -180 and 180 degrees"):
+        with pytest.raises(
+            ValueError, match="Longitude must be between -180 and 180 degrees"
+        ):
             Location(latitude=37.7749, longitude=-185.0, depth=10.5)
 
     def test_negative_depth_raises_error(self):
