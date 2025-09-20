@@ -7,15 +7,11 @@ RUN apt-get update && apt-get install -y \
     build-essential \
     && rm -rf /var/lib/apt/lists/*
 
-# Install Poetry
-RUN pip install poetry
+# Copy requirements file
+COPY requirements.txt ./
 
-# Copy poetry configuration
-COPY pyproject.toml poetry.lock* ./
-
-# Configure poetry: Don't create virtual environment, install dependencies
-RUN poetry config virtualenvs.create false \
-    && poetry install --no-dev
+# Install Python dependencies
+RUN pip install --no-cache-dir -r requirements.txt
 
 # Copy source code
 COPY src/ ./src/
