@@ -48,3 +48,18 @@ class EarthquakeRepository(ABC):
     async def find_unreviewed(self) -> List[Earthquake]:
         """Find all unreviewed earthquakes."""
         pass
+
+    @abstractmethod
+    async def find_with_filters(
+        self,
+        filters: Optional[dict] = None,
+        limit: Optional[int] = None,
+        offset: Optional[int] = None,
+    ) -> List[Earthquake]:
+        """Find earthquakes with complex filters and pagination."""
+        pass
+
+    @abstractmethod
+    async def count_with_filters(self, filters: Optional[dict] = None) -> int:
+        """Count earthquakes matching the given filters."""
+        pass
