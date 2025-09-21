@@ -88,9 +88,8 @@ logs/
 .env.test
 .env.production
 
-# Alembic
-alembic/versions/*.py
-!alembic/versions/__init__.py
+# Alembic (only ignore cache files, keep migration files)
+alembic/versions/__pycache__/
 
 # MyPy
 .mypy_cache/
