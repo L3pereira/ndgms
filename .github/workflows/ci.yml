@@ -45,13 +45,28 @@ jobs:
           sleep 2
         done
 
-    - name: Run Alembic migrations
+    - name: Debug database and run migrations
       run: |
         cd earthquake-monitor
-        echo "Running Alembic migrations..."
+        echo "=== Testing database connection ==="
+        psql -h localhost -U postgres -d earthquake_monitor_test -c "SELECT version();"
+
+        echo "=== Current directory and files ==="
+        pwd
+        ls -la alembic*
+        ls -la alembic/
+
+        echo "=== Running Alembic migrations ==="
         alembic -c alembic_test.ini upgrade head
-        echo "Verifying tables exist..."
+
+        echo "=== Verifying tables were created ==="
         psql -h localhost -U postgres -d earthquake_monitor_test -c "\dt"
+
+        echo "=== Checking earthquakes table specifically ==="
+        psql -h localhost -U postgres -d earthquake_monitor_test -c "\d earthquakes" || echo "earthquakes table not found"
+
+        echo "=== Testing insert (should work if table exists) ==="
+        psql -h localhost -U postgres -d earthquake_monitor_test -c "INSERT INTO earthquakes (id, latitude, longitude, depth, magnitude_value, magnitude_scale, occurred_at, created_at, updated_at, source, is_reviewed) VALUES (gen_random_uuid(), 1.0, 1.0, 1.0, 1.0, 'moment', NOW(), NOW(), NOW(), 'TEST', false);" || echo "Insert failed - table doesn't exist"
       env:
         DATABASE_URL: postgresql://postgres:password@localhost:5432/earthquake_monitor_test
         PGPASSWORD: password
