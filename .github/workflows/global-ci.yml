@@ -102,10 +102,10 @@ jobs:
           python -m pip install --upgrade pip
           pip install -r requirements.txt
 
-      - name: Set up test databases
+      - name: Set up environment for testing
         working-directory: ${{ matrix.service }}
         run: |
-          createdb -h localhost -U postgres earthquake_monitor_test
+          echo "Setting up test environment..."
         env:
           PGPASSWORD: password
 
@@ -130,6 +130,13 @@ jobs:
       - name: Run database integration tests
         working-directory: ${{ matrix.service }}
         run: |
+          # Drop and recreate the test database to ensure clean state
+          dropdb -h localhost -U postgres --if-exists earthquake_monitor_test
+          createdb -h localhost -U postgres earthquake_monitor_test
+          # Check current migration status
+          alembic -c alembic_test.ini current
+          # Show all available migrations
+          alembic -c alembic_test.ini history
           # Run Alembic migrations on test database
           alembic -c alembic_test.ini upgrade head
           # Verify tables were created
