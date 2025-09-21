@@ -6,8 +6,8 @@ This script fetches earthquake data from the USGS API and ingests it into the sy
 """
 
 import asyncio
-from datetime import datetime, timedelta, timezone
-from typing import Any, Dict, List
+from datetime import UTC, datetime, timedelta
+from typing import Any
 
 import httpx
 
@@ -29,7 +29,7 @@ class USGSClient:
         start_time: datetime,
         end_time: datetime,
         min_magnitude: float = 2.5,
-    ) -> List[Dict[str, Any]]:
+    ) -> list[dict[str, Any]]:
         """Fetch earthquakes from USGS API."""
         params = {
             "format": "geojson",
@@ -53,8 +53,8 @@ class EarthquakeIngestionService:
         self.use_case = use_case
 
     async def ingest_earthquakes(
-        self, earthquakes_data: List[Dict[str, Any]]
-    ) -> Dict[str, int]:
+        self, earthquakes_data: list[dict[str, Any]]
+    ) -> dict[str, int]:
         """Ingest earthquake data into the system."""
         created = 0
         errors = 0
@@ -96,7 +96,7 @@ async def main():
     ingestion_service = EarthquakeIngestionService(use_case)
 
     # Fetch data from last 24 hours
-    end_time = datetime.now(timezone.utc)
+    end_time = datetime.now(UTC)
     start_time = end_time - timedelta(hours=24)
 
     print(f"Fetching earthquakes from {start_time} to {end_time}")
