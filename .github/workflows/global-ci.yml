@@ -130,11 +130,10 @@ jobs:
       - name: Run database integration tests
         working-directory: ${{ matrix.service }}
         run: |
-          # Debug: Show current directory and files
-          pwd
-          ls -la alembic_test.ini
           # Run Alembic migrations on test database
           alembic -c alembic_test.ini upgrade head
+          # Verify tables were created
+          psql -h localhost -U postgres -d earthquake_monitor_test -c "\dt"
           # Run database integration tests
           python -m pytest tests/integration/test_earthquake_api_with_db.py -v
         env:
