@@ -30,7 +30,8 @@ repos:
     hooks:
       - id: ruff
         files: ^earthquake-monitor/.*\.py$
-        args: [--fix]
+      - id: ruff-format
+        files: ^earthquake-monitor/.*\.py$
 
   # Future services will be added here as they are implemented:
   # Java services: hurricane-monitor, tsunami-monitor
