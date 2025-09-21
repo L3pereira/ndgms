@@ -90,6 +90,7 @@ logs/
 
 # Alembic (only ignore cache files, keep migration files)
 alembic/versions/__pycache__/
+alembic/__pycache__/
 
 # MyPy
 .mypy_cache/
