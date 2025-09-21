@@ -101,7 +101,8 @@ class USGSService:
 
             # Convert timestamp to datetime
             occurred_at = datetime.fromtimestamp(
-                occurred_at_timestamp / 1000, UTC  # USGS uses milliseconds
+                occurred_at_timestamp / 1000,
+                UTC,  # USGS uses milliseconds
             )
 
             # Create domain entities
