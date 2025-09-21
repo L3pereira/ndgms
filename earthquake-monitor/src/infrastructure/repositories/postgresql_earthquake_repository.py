@@ -156,7 +156,7 @@ class PostgreSQLEarthquakeRepository(EarthquakeRepository):
         """Find all unreviewed earthquakes."""
         result = await self.session.execute(
             select(EarthquakeModel)
-            .where(not EarthquakeModel.is_reviewed)
+            .where(~EarthquakeModel.is_reviewed)
             .order_by(EarthquakeModel.occurred_at.desc())
         )
         earthquake_models = result.scalars().all()

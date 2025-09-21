@@ -8,9 +8,6 @@ from src.application.use_cases.get_earthquake_details import GetEarthquakeDetail
 from src.application.use_cases.get_earthquakes import GetEarthquakesUseCase
 from src.domain.repositories.earthquake_repository import EarthquakeRepository
 
-# Repository factory import
-from src.infrastructure.factory import get_earthquake_repository_factory
-
 
 # For now, we'll use a mock repository for demonstration
 # In a real application, this would be replaced with actual database implementation
@@ -135,7 +132,14 @@ class MockEarthquakeRepository(EarthquakeRepository):
 
 
 # Get the appropriate repository dependency function
-get_earthquake_repository = get_earthquake_repository_factory()
+def _get_repository_factory():
+    """Delayed import to avoid circular dependency."""
+    from src.infrastructure.factory import get_earthquake_repository_factory
+
+    return get_earthquake_repository_factory()
+
+
+get_earthquake_repository = _get_repository_factory()
 
 
 def get_event_publisher() -> EventPublisher:

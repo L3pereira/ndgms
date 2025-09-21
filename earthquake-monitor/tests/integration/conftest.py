@@ -7,6 +7,13 @@ from fastapi.testclient import TestClient
 
 from src.presentation.main import app
 
+# Import test database fixtures
+from .test_database_setup import (  # noqa: F401
+    db_session,
+    seed_test_data,
+    test_db_manager,
+)
+
 
 @pytest.fixture
 def client():
@@ -31,7 +38,7 @@ def client():
 
 
 @pytest.fixture
-def client_with_db(test_db_manager):
+def client_with_db(test_db_manager):  # noqa: F811
     """Create a test client for the FastAPI app with real database."""
     # Set environment to use test database
     os.environ["DATABASE_URL"] = test_db_manager.test_db_url
