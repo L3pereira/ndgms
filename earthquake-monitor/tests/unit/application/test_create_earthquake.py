@@ -1,4 +1,4 @@
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from unittest.mock import AsyncMock, Mock
 
 import pytest
@@ -39,7 +39,7 @@ class TestCreateEarthquakeUseCase:
             depth=10.5,
             magnitude_value=5.5,
             magnitude_scale="moment",
-            occurred_at=datetime(2024, 1, 1, 12, 0, 0, tzinfo=timezone.utc),
+            occurred_at=datetime(2024, 1, 1, 12, 0, 0, tzinfo=UTC),
             source="USGS",
         )
 
@@ -92,7 +92,7 @@ class TestCreateEarthquakeUseCase:
             depth=10.5,
             magnitude_value=6.0,  # High magnitude to trigger alert
             magnitude_scale="moment",
-            occurred_at=datetime(2024, 1, 1, 12, 0, 0, tzinfo=timezone.utc),
+            occurred_at=datetime(2024, 1, 1, 12, 0, 0, tzinfo=UTC),
             source="USGS",
         )
 

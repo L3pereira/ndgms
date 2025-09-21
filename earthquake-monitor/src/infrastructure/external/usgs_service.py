@@ -2,8 +2,7 @@
 
 import json
 import logging
-from datetime import datetime, timezone
-from typing import List, Optional
+from datetime import UTC, datetime
 
 import httpx
 
@@ -27,7 +26,7 @@ class USGSService:
 
     async def fetch_recent_earthquakes(
         self, period: str = "day", magnitude: str = "all"
-    ) -> List[Earthquake]:
+    ) -> list[Earthquake]:
         """
         Fetch recent earthquakes from USGS.
 
@@ -69,7 +68,7 @@ class USGSService:
             logger.error(f"Error fetching USGS data: {e}")
             raise
 
-    def _parse_earthquake_feature(self, feature: dict) -> Optional[Earthquake]:
+    def _parse_earthquake_feature(self, feature: dict) -> Earthquake | None:
         """Parse a GeoJSON feature into an Earthquake entity."""
         try:
             properties = feature.get("properties", {})
@@ -102,7 +101,7 @@ class USGSService:
 
             # Convert timestamp to datetime
             occurred_at = datetime.fromtimestamp(
-                occurred_at_timestamp / 1000, timezone.utc  # USGS uses milliseconds
+                occurred_at_timestamp / 1000, UTC  # USGS uses milliseconds
             )
 
             # Create domain entities
@@ -137,19 +136,15 @@ class USGSService:
             earthquake.raw_data = json.dumps(feature)
 
             # Additional USGS properties we might want to store
-            setattr(earthquake, "place", properties.get("place"))
-            setattr(earthquake, "url", properties.get("url"))
-            setattr(earthquake, "detail_url", properties.get("detail"))
-            setattr(earthquake, "status", properties.get("status"))
-            setattr(earthquake, "tsunami", properties.get("tsunami", 0))
-            setattr(earthquake, "significance", properties.get("sig"))
-            setattr(earthquake, "alert", properties.get("alert"))
-            setattr(
-                earthquake, "cdi", properties.get("cdi")
-            )  # Community Did You Feel It
-            setattr(
-                earthquake, "mmi", properties.get("mmi")
-            )  # Modified Mercalli Intensity
+            earthquake.place = properties.get("place")
+            earthquake.url = properties.get("url")
+            earthquake.detail_url = properties.get("detail")
+            earthquake.status = properties.get("status")
+            earthquake.tsunami = properties.get("tsunami", 0)
+            earthquake.significance = properties.get("sig")
+            earthquake.alert = properties.get("alert")
+            earthquake.cdi = properties.get("cdi")  # Community Did You Feel It
+            earthquake.mmi = properties.get("mmi")  # Modified Mercalli Intensity
 
             return earthquake
 
@@ -157,7 +152,7 @@ class USGSService:
             logger.error(f"Error parsing earthquake feature: {e}")
             return None
 
-    async def fetch_earthquake_details(self, usgs_id: str) -> Optional[dict]:
+    async def fetch_earthquake_details(self, usgs_id: str) -> dict | None:
         """
         Fetch detailed information for a specific earthquake.
 

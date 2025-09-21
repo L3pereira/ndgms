@@ -1,7 +1,6 @@
 """PostgreSQL implementation of earthquake repository."""
 
 from datetime import datetime
-from typing import List, Optional
 
 from sqlalchemy import and_, func
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -54,7 +53,7 @@ class PostgreSQLEarthquakeRepository(EarthquakeRepository):
 
         return str(earthquake_model.id)
 
-    async def find_by_id(self, earthquake_id: str) -> Optional[Earthquake]:
+    async def find_by_id(self, earthquake_id: str) -> Earthquake | None:
         """Find an earthquake by its ID."""
         result = await self.session.execute(
             select(EarthquakeModel).where(EarthquakeModel.id == earthquake_id)
@@ -66,7 +65,7 @@ class PostgreSQLEarthquakeRepository(EarthquakeRepository):
 
         return self._model_to_entity(earthquake_model)
 
-    async def find_all(self) -> List[Earthquake]:
+    async def find_all(self) -> list[Earthquake]:
         """Find all earthquakes."""
         result = await self.session.execute(
             select(EarthquakeModel).order_by(EarthquakeModel.occurred_at.desc())
@@ -86,8 +85,8 @@ class PostgreSQLEarthquakeRepository(EarthquakeRepository):
         return count > 0
 
     async def find_by_magnitude_range(
-        self, min_magnitude: float, max_magnitude: Optional[float] = None
-    ) -> List[Earthquake]:
+        self, min_magnitude: float, max_magnitude: float | None = None
+    ) -> list[Earthquake]:
         """Find earthquakes by magnitude range."""
         query = select(EarthquakeModel).where(
             EarthquakeModel.magnitude_value >= min_magnitude
@@ -105,7 +104,7 @@ class PostgreSQLEarthquakeRepository(EarthquakeRepository):
 
     async def find_by_time_range(
         self, start_time: datetime, end_time: datetime
-    ) -> List[Earthquake]:
+    ) -> list[Earthquake]:
         """Find earthquakes by time range."""
         result = await self.session.execute(
             select(EarthquakeModel)
@@ -123,7 +122,7 @@ class PostgreSQLEarthquakeRepository(EarthquakeRepository):
 
     async def find_by_location_radius(
         self, latitude: float, longitude: float, radius_km: float
-    ) -> List[Earthquake]:
+    ) -> list[Earthquake]:
         """Find earthquakes within a radius of a location (simple distance calculation)."""
         # Using simple bounding box calculation for now
         # In a real PostGIS implementation, we'd use ST_DWithin
@@ -152,7 +151,7 @@ class PostgreSQLEarthquakeRepository(EarthquakeRepository):
 
         return [self._model_to_entity(model) for model in earthquake_models]
 
-    async def find_unreviewed(self) -> List[Earthquake]:
+    async def find_unreviewed(self) -> list[Earthquake]:
         """Find all unreviewed earthquakes."""
         result = await self.session.execute(
             select(EarthquakeModel)
@@ -165,10 +164,10 @@ class PostgreSQLEarthquakeRepository(EarthquakeRepository):
 
     async def find_with_filters(
         self,
-        filters: Optional[dict] = None,
-        limit: Optional[int] = None,
-        offset: Optional[int] = None,
-    ) -> List[Earthquake]:
+        filters: dict | None = None,
+        limit: int | None = None,
+        offset: int | None = None,
+    ) -> list[Earthquake]:
         """Find earthquakes with complex filters and pagination."""
         query = select(EarthquakeModel)
 
@@ -237,7 +236,7 @@ class PostgreSQLEarthquakeRepository(EarthquakeRepository):
 
         return [self._model_to_entity(model) for model in earthquake_models]
 
-    async def count_with_filters(self, filters: Optional[dict] = None) -> int:
+    async def count_with_filters(self, filters: dict | None = None) -> int:
         """Count earthquakes matching the given filters."""
         query = select(func.count(EarthquakeModel.id))
 

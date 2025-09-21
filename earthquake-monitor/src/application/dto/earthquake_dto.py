@@ -1,19 +1,18 @@
 from dataclasses import dataclass
 from datetime import datetime
-from typing import Optional
 
 
 @dataclass
 class EarthquakeFilters:
-    min_magnitude: Optional[float] = None
-    max_magnitude: Optional[float] = None
-    start_time: Optional[datetime] = None
-    end_time: Optional[datetime] = None
-    latitude: Optional[float] = None
-    longitude: Optional[float] = None
-    radius_km: Optional[float] = None
-    is_reviewed: Optional[bool] = None
-    source: Optional[str] = None
+    min_magnitude: float | None = None
+    max_magnitude: float | None = None
+    start_time: datetime | None = None
+    end_time: datetime | None = None
+    latitude: float | None = None
+    longitude: float | None = None
+    radius_km: float | None = None
+    is_reviewed: bool | None = None
+    source: str | None = None
 
 
 @dataclass

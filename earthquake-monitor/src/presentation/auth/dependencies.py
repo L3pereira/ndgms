@@ -1,6 +1,6 @@
 """Authentication dependencies for protecting endpoints."""
 
-from typing import Annotated, Optional
+from typing import Annotated
 
 from authx import TokenPayload
 from fastapi import Depends, HTTPException, Request, status
@@ -18,7 +18,7 @@ async def get_current_user_payload(
     return await security.auth.access_token_required(request)
 
 
-def get_optional_current_user_payload() -> Optional[TokenPayload]:
+def get_optional_current_user_payload() -> TokenPayload | None:
     """Get the current user's token payload (optional - can be None)."""
     # For optional tokens, we'll handle this in the route itself
     # This is a placeholder that returns None - actual implementation
@@ -41,11 +41,9 @@ def get_current_user(
 
 
 def get_optional_current_user(
-    payload: Annotated[
-        Optional[TokenPayload], Depends(get_optional_current_user_payload)
-    ],
+    payload: Annotated[TokenPayload | None, Depends(get_optional_current_user_payload)],
     user_repo: Annotated[UserRepository, Depends(get_user_repository)],
-) -> Optional[User]:
+) -> User | None:
     """Get the current user if authenticated, None otherwise."""
     if payload is None:
         return None

@@ -2,7 +2,8 @@
 
 import asyncio
 import os
-from typing import AsyncGenerator
+from collections.abc import AsyncGenerator
+from datetime import UTC
 
 import pytest
 from sqlalchemy import create_engine, text
@@ -158,7 +159,7 @@ async def db_session(test_db_manager) -> AsyncGenerator[AsyncSession, None]:
 async def seed_test_data(db_session):
     """Seed the test database with initial data."""
     import uuid
-    from datetime import datetime, timezone
+    from datetime import datetime
 
     from src.infrastructure.database.models import EarthquakeModel
 
@@ -171,7 +172,7 @@ async def seed_test_data(db_session):
             depth=10.0,
             magnitude_value=5.5,
             magnitude_scale="moment",
-            occurred_at=datetime(2024, 1, 15, 10, 30, 0, tzinfo=timezone.utc),
+            occurred_at=datetime(2024, 1, 15, 10, 30, 0, tzinfo=UTC),
             source="TEST",
             is_reviewed=False,
         ),
@@ -182,7 +183,7 @@ async def seed_test_data(db_session):
             depth=35.0,
             magnitude_value=6.8,
             magnitude_scale="moment",
-            occurred_at=datetime(2024, 1, 16, 14, 45, 0, tzinfo=timezone.utc),
+            occurred_at=datetime(2024, 1, 16, 14, 45, 0, tzinfo=UTC),
             source="TEST",
             is_reviewed=True,
         ),

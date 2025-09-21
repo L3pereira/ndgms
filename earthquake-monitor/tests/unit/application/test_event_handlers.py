@@ -1,4 +1,4 @@
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from unittest.mock import AsyncMock, Mock
 
 import pytest
@@ -26,7 +26,7 @@ class TestEarthquakeEventHandlers:
     ):
         event = EarthquakeDetected(
             earthquake_id="test-123",
-            occurred_at=datetime(2024, 1, 1, 12, 0, 0, tzinfo=timezone.utc),
+            occurred_at=datetime(2024, 1, 1, 12, 0, 0, tzinfo=UTC),
             magnitude=5.5,
             latitude=37.7749,
             longitude=-122.4194,

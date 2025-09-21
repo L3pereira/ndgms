@@ -1,8 +1,7 @@
 """User repository for authentication."""
 
 import uuid
-from datetime import datetime, timezone
-from typing import Dict, Optional
+from datetime import UTC, datetime
 
 from .models import User, UserCreate
 from .security import get_security_service
@@ -12,8 +11,8 @@ class UserRepository:
     """In-memory user repository for demonstration purposes."""
 
     def __init__(self):
-        self._users: Dict[str, User] = {}
-        self._users_by_email: Dict[str, str] = {}  # email -> user_id mapping
+        self._users: dict[str, User] = {}
+        self._users_by_email: dict[str, str] = {}  # email -> user_id mapping
         self._security = get_security_service()
 
         # Create a default admin user for testing
@@ -54,7 +53,7 @@ class UserRepository:
             full_name=user_data.full_name,
             is_active=user_data.is_active,
             hashed_password=hashed_password,
-            created_at=datetime.now(timezone.utc),
+            created_at=datetime.now(UTC),
             last_login=None,
         )
 
@@ -63,18 +62,18 @@ class UserRepository:
 
         return user
 
-    def get_user_by_id(self, user_id: str) -> Optional[User]:
+    def get_user_by_id(self, user_id: str) -> User | None:
         """Get a user by ID."""
         return self._users.get(user_id)
 
-    def get_user_by_email(self, email: str) -> Optional[User]:
+    def get_user_by_email(self, email: str) -> User | None:
         """Get a user by email."""
         user_id = self._users_by_email.get(email)
         if user_id:
             return self._users.get(user_id)
         return None
 
-    def authenticate_user(self, email: str, password: str) -> Optional[User]:
+    def authenticate_user(self, email: str, password: str) -> User | None:
         """Authenticate a user by email and password."""
         user = self.get_user_by_email(email)
         if not user or not user.is_active:
@@ -82,7 +81,7 @@ class UserRepository:
 
         if self._security.verify_password(password, user.hashed_password):
             # Update last login
-            user.last_login = datetime.now(timezone.utc)
+            user.last_login = datetime.now(UTC)
             return user
 
         return None
@@ -91,7 +90,7 @@ class UserRepository:
         """Update the user's last login timestamp."""
         user = self.get_user_by_id(user_id)
         if user:
-            user.last_login = datetime.now(timezone.utc)
+            user.last_login = datetime.now(UTC)
 
     def deactivate_user(self, user_id: str) -> bool:
         """Deactivate a user."""

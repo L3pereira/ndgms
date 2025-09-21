@@ -1,5 +1,4 @@
 from datetime import datetime
-from typing import List, Optional
 
 from pydantic import BaseModel, ConfigDict, Field
 
@@ -10,7 +9,7 @@ class CreateEarthquakeSchema(BaseModel):
     depth: float = Field(..., ge=0, description="Depth in kilometers")
     magnitude_value: float = Field(..., ge=0, le=12, description="Magnitude value")
     magnitude_scale: str = Field(default="moment", description="Magnitude scale type")
-    occurred_at: Optional[datetime] = Field(
+    occurred_at: datetime | None = Field(
         None, description="When the earthquake occurred"
     )
     source: str = Field(default="USGS", description="Data source")
@@ -72,19 +71,19 @@ class PaginationSchema(BaseModel):
 
 
 class EarthquakeListResponseSchema(BaseModel):
-    earthquakes: List[EarthquakeListItemSchema]
+    earthquakes: list[EarthquakeListItemSchema]
     pagination: PaginationSchema
 
 
 class EarthquakeFiltersSchema(BaseModel):
-    min_magnitude: Optional[float] = Field(None, ge=0, le=12)
-    max_magnitude: Optional[float] = Field(None, ge=0, le=12)
-    start_time: Optional[datetime] = None
-    end_time: Optional[datetime] = None
-    latitude: Optional[float] = Field(None, ge=-90, le=90)
-    longitude: Optional[float] = Field(None, ge=-180, le=180)
-    radius_km: Optional[float] = Field(None, ge=0, le=20000)
-    is_reviewed: Optional[bool] = None
-    source: Optional[str] = None
+    min_magnitude: float | None = Field(None, ge=0, le=12)
+    max_magnitude: float | None = Field(None, ge=0, le=12)
+    start_time: datetime | None = None
+    end_time: datetime | None = None
+    latitude: float | None = Field(None, ge=-90, le=90)
+    longitude: float | None = Field(None, ge=-180, le=180)
+    radius_km: float | None = Field(None, ge=0, le=20000)
+    is_reviewed: bool | None = None
+    source: str | None = None
     page: int = Field(1, ge=1)
     size: int = Field(50, ge=1, le=1000)

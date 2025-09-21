@@ -1,7 +1,6 @@
 """Authentication models and schemas."""
 
 from datetime import datetime
-from typing import Optional
 
 from pydantic import BaseModel, ConfigDict, EmailStr, Field
 
@@ -33,7 +32,7 @@ class UserResponse(UserBase):
 
     id: str
     created_at: datetime
-    last_login: Optional[datetime] = None
+    last_login: datetime | None = None
 
     model_config = ConfigDict(from_attributes=True)
 
@@ -59,6 +58,6 @@ class User(UserBase):
     id: str
     hashed_password: str
     created_at: datetime
-    last_login: Optional[datetime] = None
+    last_login: datetime | None = None
 
     model_config = ConfigDict(from_attributes=True)

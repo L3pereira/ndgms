@@ -2,7 +2,6 @@
 
 import logging
 from dataclasses import dataclass
-from typing import List, Optional
 
 from src.application.events.event_publisher import EventPublisher
 from src.domain.entities.earthquake import Earthquake
@@ -20,7 +19,7 @@ class IngestionRequest:
     source: str
     period: str = "day"
     magnitude_filter: str = "all"
-    limit: Optional[int] = None
+    limit: int | None = None
 
 
 @dataclass
@@ -31,7 +30,7 @@ class IngestionResult:
     new_earthquakes: int
     updated_earthquakes: int
     errors: int
-    earthquake_ids: List[str]
+    earthquake_ids: list[str]
 
 
 class IngestEarthquakeDataUseCase:
@@ -44,7 +43,7 @@ class IngestEarthquakeDataUseCase:
         self.event_publisher = event_publisher
 
     async def execute(
-        self, earthquakes: List[Earthquake], source: str = "USGS"
+        self, earthquakes: list[Earthquake], source: str = "USGS"
     ) -> IngestionResult:
         """
         Ingest a list of earthquakes into the system.

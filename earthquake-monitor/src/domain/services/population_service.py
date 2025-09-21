@@ -1,5 +1,4 @@
 from abc import ABC, abstractmethod
-from typing import List
 
 from ..entities.location import Location
 
@@ -23,7 +22,7 @@ class PopulationService(ABC):
 class PopulationServiceImpl(PopulationService):
     """Implementation of population service with basic logic."""
 
-    def __init__(self, populated_areas: List[tuple] = None):
+    def __init__(self, populated_areas: list[tuple] = None):
         self._populated_areas = populated_areas or [
             (37.7749, -122.4194),  # San Francisco
             (34.0522, -118.2437),  # Los Angeles

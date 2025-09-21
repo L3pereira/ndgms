@@ -102,17 +102,50 @@ jobs:
           python -m pip install --upgrade pip
           pip install -r requirements.txt
 
-      - name: Run tests
+      - name: Set up test databases
         working-directory: ${{ matrix.service }}
-        run: pytest
+        run: |
+          createdb -h localhost -U postgres earthquake_monitor_test
         env:
-          DATABASE_URL: postgresql://postgres:password@localhost:5432/test_db
-          REDIS_URL: redis://localhost:6379
+          PGPASSWORD: password
+
+      - name: Run unit tests (mocked dependencies)
+        working-directory: ${{ matrix.service }}
+        run: python -m pytest tests/unit/ -v --cov=src --cov-report=xml --cov-report=term-missing
+        env:
+          REPOSITORY_TYPE: mock
+          JWT_SECRET_KEY: test-secret-key-for-ci
+          JWT_ALGORITHM: HS256
+          JWT_ACCESS_TOKEN_EXPIRE_MINUTES: 30
+
+      - name: Run integration tests (mock repository)
+        working-directory: ${{ matrix.service }}
+        run: python -m pytest tests/integration/ -v -k "not test_earthquake_api_with_db"
+        env:
+          REPOSITORY_TYPE: mock
+          JWT_SECRET_KEY: test-secret-key-for-ci
+          JWT_ALGORITHM: HS256
+          JWT_ACCESS_TOKEN_EXPIRE_MINUTES: 30
+
+      - name: Run database integration tests
+        working-directory: ${{ matrix.service }}
+        run: |
+          # Run Alembic migrations on test database
+          python -m alembic -c alembic_test.ini upgrade head
+          # Run database integration tests
+          python -m pytest tests/integration/test_earthquake_api_with_db.py -v
+        env:
+          DATABASE_URL: postgresql://postgres:password@localhost:5432/earthquake_monitor_test
+          REPOSITORY_TYPE: postgresql
+          JWT_SECRET_KEY: test-secret-key-for-ci
+          JWT_ALGORITHM: HS256
+          JWT_ACCESS_TOKEN_EXPIRE_MINUTES: 30
+          PGPASSWORD: password
 
       - name: Upload coverage
         uses: codecov/codecov-action@v3
         with:
-          file: ${{ matrix.service }}/.coverage
+          file: ${{ matrix.service }}/coverage.xml
           flags: ${{ matrix.service }}
           name: ${{ matrix.service }}-coverage
 

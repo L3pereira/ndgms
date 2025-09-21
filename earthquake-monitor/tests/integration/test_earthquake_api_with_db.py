@@ -1,5 +1,7 @@
 """Integration tests for earthquake API endpoints with real database."""
 
+from datetime import UTC
+
 from fastapi.testclient import TestClient
 
 
@@ -102,7 +104,7 @@ class TestEarthquakeAPIWithDatabase:
         self, db_session, sample_earthquake_data: dict
     ):
         """Test that database sessions properly handle rollbacks."""
-        from datetime import datetime, timezone
+        from datetime import datetime
 
         from src.domain.entities.earthquake import Earthquake
         from src.domain.entities.location import Location
@@ -126,7 +128,7 @@ class TestEarthquakeAPIWithDatabase:
         earthquake = Earthquake(
             location=location,
             magnitude=magnitude,
-            occurred_at=datetime.now(timezone.utc),
+            occurred_at=datetime.now(UTC),
             source=sample_earthquake_data["source"],
         )
 

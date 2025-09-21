@@ -1,6 +1,5 @@
 import json
 import logging
-from typing import Dict, Set
 
 from fastapi import WebSocket
 
@@ -9,9 +8,9 @@ logger = logging.getLogger(__name__)
 
 class WebSocketManager:
     def __init__(self):
-        self._connections: Dict[str, WebSocket] = {}
-        self._earthquake_subscribers: Set[str] = set()
-        self._alert_subscribers: Set[str] = set()
+        self._connections: dict[str, WebSocket] = {}
+        self._earthquake_subscribers: set[str] = set()
+        self._alert_subscribers: set[str] = set()
 
     async def connect(self, websocket: WebSocket, client_id: str) -> None:
         await websocket.accept()
@@ -47,7 +46,7 @@ class WebSocketManager:
         await self._broadcast_to_subscribers(self._alert_subscribers, message)
 
     async def _broadcast_to_subscribers(
-        self, subscribers: Set[str], message: dict
+        self, subscribers: set[str], message: dict
     ) -> None:
         if not subscribers:
             return

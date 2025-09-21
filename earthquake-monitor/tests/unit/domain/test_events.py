@@ -1,4 +1,4 @@
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 
 from src.domain.events.earthquake_detected import EarthquakeDetected
 from src.domain.events.high_magnitude_alert import HighMagnitudeAlert
@@ -8,7 +8,7 @@ class TestEarthquakeDetected:
     def test_create_earthquake_detected_event(self):
         event = EarthquakeDetected(
             earthquake_id="test-123",
-            occurred_at=datetime(2024, 1, 1, 12, 0, 0, tzinfo=timezone.utc),
+            occurred_at=datetime(2024, 1, 1, 12, 0, 0, tzinfo=UTC),
             magnitude=5.5,
             latitude=37.7749,
             longitude=-122.4194,

@@ -1,5 +1,3 @@
-from typing import Optional
-
 from src.application.dto.earthquake_dto import (
     EarthquakeFilters,
     PaginatedResponse,
@@ -14,8 +12,8 @@ class GetEarthquakesUseCase:
 
     async def execute(
         self,
-        filters: Optional[EarthquakeFilters] = None,
-        pagination: Optional[PaginationParams] = None,
+        filters: EarthquakeFilters | None = None,
+        pagination: PaginationParams | None = None,
     ) -> PaginatedResponse:
         if pagination is None:
             pagination = PaginationParams()

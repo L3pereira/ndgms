@@ -1,7 +1,5 @@
 """API endpoints for earthquake data ingestion."""
 
-from typing import Optional
-
 from fastapi import APIRouter, Depends, HTTPException, status
 from pydantic import BaseModel, Field
 
@@ -26,7 +24,7 @@ class IngestionRequestSchema(BaseModel):
     magnitude_filter: str = Field(
         default="2.5", description="Magnitude filter (all, significant, 4.5, 2.5, 1.0)"
     )
-    limit: Optional[int] = Field(
+    limit: int | None = Field(
         None, ge=1, le=1000, description="Maximum number of earthquakes to fetch"
     )
 

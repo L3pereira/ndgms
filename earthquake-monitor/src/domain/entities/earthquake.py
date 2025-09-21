@@ -1,5 +1,5 @@
 from dataclasses import dataclass, field
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from uuid import uuid4
 
 from .location import Location
@@ -20,7 +20,7 @@ class Earthquake:
         if self.occurred_at.tzinfo is None:
             current_time = datetime.now()
         else:
-            current_time = datetime.now(timezone.utc)
+            current_time = datetime.now(UTC)
 
         if self.occurred_at > current_time:
             raise ValueError("Earthquake occurrence time cannot be in the future")
