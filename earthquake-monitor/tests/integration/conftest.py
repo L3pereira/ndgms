@@ -1,5 +1,7 @@
 """Pytest configuration for integration tests."""
 
+import os
+
 import pytest
 from fastapi.testclient import TestClient
 
@@ -8,7 +10,33 @@ from src.presentation.main import app
 
 @pytest.fixture
 def client():
-    """Create a test client for the FastAPI app."""
+    """Create a test client for the FastAPI app with mock repository."""
+    # Reset auth repository for clean test state
+    from src.presentation.auth.repository import get_user_repository
+    from src.presentation.auth.security import reset_security_service
+
+    # Ensure we use mock repository for regular integration tests
+    os.environ["REPOSITORY_TYPE"] = "mock"
+
+    # Reset the security service to ensure clean JWT state
+    reset_security_service()
+
+    # Reset auth repository
+    user_repo = get_user_repository()
+    user_repo._users.clear()
+    user_repo._users_by_email.clear()
+    user_repo._create_default_users()
+
+    return TestClient(app)
+
+
+@pytest.fixture
+def client_with_db(test_db_manager):
+    """Create a test client for the FastAPI app with real database."""
+    # Set environment to use test database
+    os.environ["DATABASE_URL"] = test_db_manager.test_db_url
+    os.environ["REPOSITORY_TYPE"] = "postgresql"
+
     # Reset auth repository for clean test state
     from src.presentation.auth.repository import get_user_repository
     from src.presentation.auth.security import reset_security_service
@@ -16,7 +44,7 @@ def client():
     # Reset the security service to ensure clean JWT state
     reset_security_service()
 
-    # Reset auth repository
+    # Reset auth repository (still using in-memory for auth)
     user_repo = get_user_repository()
     user_repo._users.clear()
     user_repo._users_by_email.clear()

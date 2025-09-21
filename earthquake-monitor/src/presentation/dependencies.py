@@ -8,6 +8,9 @@ from src.application.use_cases.get_earthquake_details import GetEarthquakeDetail
 from src.application.use_cases.get_earthquakes import GetEarthquakesUseCase
 from src.domain.repositories.earthquake_repository import EarthquakeRepository
 
+# Repository factory import
+from src.infrastructure.factory import get_earthquake_repository_factory
+
 
 # For now, we'll use a mock repository for demonstration
 # In a real application, this would be replaced with actual database implementation
@@ -131,15 +134,8 @@ class MockEarthquakeRepository(EarthquakeRepository):
         return len(results)
 
 
-# Singleton repository instance
-_repository_instance = None
-
-
-def get_earthquake_repository() -> EarthquakeRepository:
-    global _repository_instance
-    if _repository_instance is None:
-        _repository_instance = MockEarthquakeRepository()
-    return _repository_instance
+# Get the appropriate repository dependency function
+get_earthquake_repository = get_earthquake_repository_factory()
 
 
 def get_event_publisher() -> EventPublisher:

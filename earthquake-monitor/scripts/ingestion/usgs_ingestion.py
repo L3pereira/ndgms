@@ -6,7 +6,7 @@ This script fetches earthquake data from the USGS API and ingests it into the sy
 """
 
 import asyncio
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from typing import Any, Dict, List
 
 import httpx
@@ -96,7 +96,7 @@ async def main():
     ingestion_service = EarthquakeIngestionService(use_case)
 
     # Fetch data from last 24 hours
-    end_time = datetime.utcnow()
+    end_time = datetime.now(timezone.utc)
     start_time = end_time - timedelta(hours=24)
 
     print(f"Fetching earthquakes from {start_time} to {end_time}")

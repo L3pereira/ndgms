@@ -15,7 +15,7 @@ from src.domain.events.high_magnitude_alert import HighMagnitudeAlert
 from .auth.router import router as auth_router
 from .auth.security import get_security_service
 from .exceptions import ResourceNotFoundError, ValidationError
-from .routers import earthquakes, websocket
+from .routers import earthquakes, ingestion, websocket
 
 # Configure logging
 logging.basicConfig(
@@ -123,6 +123,7 @@ security_service.auth.handle_errors(app)
 # Include routers
 app.include_router(auth_router, prefix="/api/v1")
 app.include_router(earthquakes.router, prefix="/api/v1")
+app.include_router(ingestion.router, prefix="/api/v1")
 app.include_router(websocket.router, prefix="/api/v1")
 
 
