@@ -2,17 +2,17 @@
 
 from datetime import UTC
 
-from fastapi.testclient import TestClient
+from httpx import AsyncClient
 
 
 class TestEarthquakeAPIWithDatabase:
     """Test earthquake API endpoints with real PostgreSQL database."""
 
-    def test_create_earthquake_in_database(
-        self, client_with_db: TestClient, sample_earthquake_data: dict
+    async def test_create_earthquake_in_database(
+        self, client_with_db: AsyncClient, sample_earthquake_data: dict
     ):
         """Test earthquake creation with real database storage."""
-        response = client_with_db.post(
+        response = await client_with_db.post(
             "/api/v1/earthquakes/", json=sample_earthquake_data
         )
 
@@ -23,7 +23,7 @@ class TestEarthquakeAPIWithDatabase:
 
         # Verify the earthquake was actually saved to database
         earthquake_id = data["id"]
-        get_response = client_with_db.get(f"/api/v1/earthquakes/{earthquake_id}")
+        get_response = await client_with_db.get(f"/api/v1/earthquakes/{earthquake_id}")
         assert get_response.status_code == 200
 
         earthquake_detail = get_response.json()
@@ -36,12 +36,12 @@ class TestEarthquakeAPIWithDatabase:
             == sample_earthquake_data["latitude"]
         )
 
-    def test_earthquake_persistence_across_requests(
-        self, client_with_db: TestClient, sample_earthquake_data: dict
+    async def test_earthquake_persistence_across_requests(
+        self, client_with_db: AsyncClient, sample_earthquake_data: dict
     ):
         """Test that earthquakes persist in database across requests."""
         # Create first earthquake
-        response1 = client_with_db.post(
+        response1 = await client_with_db.post(
             "/api/v1/earthquakes/", json=sample_earthquake_data
         )
         assert response1.status_code == 201
@@ -53,23 +53,27 @@ class TestEarthquakeAPIWithDatabase:
         sample_earthquake_data2["latitude"] = 35.6762
         sample_earthquake_data2["longitude"] = 139.6503
 
-        response2 = client_with_db.post(
+        response2 = await client_with_db.post(
             "/api/v1/earthquakes/", json=sample_earthquake_data2
         )
         assert response2.status_code == 201
         earthquake_id2 = response2.json()["id"]
 
         # Verify both earthquakes exist in database
-        get_response1 = client_with_db.get(f"/api/v1/earthquakes/{earthquake_id1}")
+        get_response1 = await client_with_db.get(
+            f"/api/v1/earthquakes/{earthquake_id1}"
+        )
         assert get_response1.status_code == 200
         assert get_response1.json()["magnitude"]["value"] == 5.5
 
-        get_response2 = client_with_db.get(f"/api/v1/earthquakes/{earthquake_id2}")
+        get_response2 = await client_with_db.get(
+            f"/api/v1/earthquakes/{earthquake_id2}"
+        )
         assert get_response2.status_code == 200
         assert get_response2.json()["magnitude"]["value"] == 6.2
 
         # Verify list endpoint shows both earthquakes
-        list_response = client_with_db.get("/api/v1/earthquakes/")
+        list_response = await client_with_db.get("/api/v1/earthquakes/")
         assert list_response.status_code == 200
         earthquakes = list_response.json()["earthquakes"]
         assert len(earthquakes) >= 2
@@ -78,12 +82,12 @@ class TestEarthquakeAPIWithDatabase:
         assert earthquake_id1 in earthquake_ids
         assert earthquake_id2 in earthquake_ids
 
-    def test_earthquake_filtering_with_database(
-        self, client_with_db: TestClient, seed_test_data
+    async def test_earthquake_filtering_with_database(
+        self, client_with_db: AsyncClient, seed_test_data
     ):
         """Test earthquake filtering with seeded database data."""
         # Test magnitude filtering
-        response = client_with_db.get("/api/v1/earthquakes/?min_magnitude=6.0")
+        response = await client_with_db.get("/api/v1/earthquakes/?min_magnitude=6.0")
         assert response.status_code == 200
 
         earthquakes = response.json()["earthquakes"]
@@ -92,7 +96,7 @@ class TestEarthquakeAPIWithDatabase:
             assert earthquake["magnitude_value"] >= 6.0
 
         # Test source filtering
-        response = client_with_db.get("/api/v1/earthquakes/?source=TEST")
+        response = await client_with_db.get("/api/v1/earthquakes/?source=TEST")
         assert response.status_code == 200
 
         earthquakes = response.json()["earthquakes"]
@@ -146,7 +150,7 @@ class TestEarthquakeAPIWithDatabase:
 
         # Session should rollback after test, so earthquake won't persist
 
-    def test_data_ingestion_with_database(self, client_with_db: TestClient):
+    async def test_data_ingestion_with_database(self, client_with_db: AsyncClient):
         """Test data ingestion endpoint (may fail if external service unavailable)."""
         # Test ingestion endpoint
         ingestion_request = {
@@ -156,7 +160,7 @@ class TestEarthquakeAPIWithDatabase:
             "limit": 2,  # Small number for testing
         }
 
-        response = client_with_db.post(
+        response = await client_with_db.post(
             "/api/v1/ingestion/trigger", json=ingestion_request
         )
 
@@ -170,7 +174,7 @@ class TestEarthquakeAPIWithDatabase:
 
             # If ingestion was successful, verify earthquakes were saved
             if result["new_earthquakes"] > 0:
-                list_response = client_with_db.get("/api/v1/earthquakes/")
+                list_response = await client_with_db.get("/api/v1/earthquakes/")
                 assert list_response.status_code == 200
 
                 earthquakes = list_response.json()["earthquakes"]

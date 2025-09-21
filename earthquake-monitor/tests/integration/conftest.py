@@ -4,6 +4,7 @@ import os
 
 import pytest
 from fastapi.testclient import TestClient
+from httpx import ASGITransport, AsyncClient
 
 from src.presentation.main import app
 
@@ -38,8 +39,8 @@ def client():
 
 
 @pytest.fixture
-def client_with_db(test_db_manager):  # noqa: F811
-    """Create a test client for the FastAPI app with real database."""
+async def client_with_db(test_db_manager):  # noqa: F811
+    """Create an async test client for the FastAPI app with real database."""
     # Set environment to use test database
     os.environ["DATABASE_URL"] = test_db_manager.test_db_url
     os.environ["REPOSITORY_TYPE"] = "postgresql"
@@ -57,7 +58,11 @@ def client_with_db(test_db_manager):  # noqa: F811
     user_repo._users_by_email.clear()
     user_repo._create_default_users()
 
-    return TestClient(app)
+    # Use AsyncClient for proper async support
+    async with AsyncClient(
+        transport=ASGITransport(app=app), base_url="http://testserver"
+    ) as client:
+        yield client
 
 
 @pytest.fixture
