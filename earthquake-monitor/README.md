@@ -511,10 +511,6 @@ class GetEarthquakesUseCase:
 | **Always true (physics/science)** | **Application-specific policies** |
 | **What earthquakes ARE** | **What to DO with earthquakes** |
 
-#### **🎭 Real-world Interview Analogy**
-- **Domain Logic** = **Doctor's Medical Knowledge**: "Blood pressure > 140/90 is hypertension" (always true)
-- **Application Logic** = **Hospital Workflow**: "Send SMS alerts to emergency contacts for critical patients" (hospital-specific process)
-
 This separation ensures:
 - **Domain rules** can be tested in isolation
 - **Business logic** is technology-independent
@@ -824,7 +820,6 @@ docker-compose logs earthquake-monitor
 ### **Environment-Specific Configurations**
 
 - **🔧 Development**: `docker-compose.dev.yml` with hot reload
-- **🧪 Testing**: In-memory database for fast tests
 - **🚀 Production**: Optimized with proper security and monitoring
 
 ### **Health Checks**
@@ -841,71 +836,6 @@ curl http://localhost:8000/health/db
 # External service status
 curl http://localhost:8000/health/external
 ```
-
-### **Monitoring & Logging**
-
-- **📊 Structured Logging**: JSON logs with request tracing
-- **📈 Metrics**: Request/response times, error rates
-- **🚨 Alerting**: Health check failures and error thresholds
-- **🔍 Tracing**: Request correlation IDs
-
-## 📈 Performance
-
-### **Optimization Features**
-
-- **⚡ Async/Await**: Non-blocking I/O throughout
-- **🏊 Connection Pooling**: Efficient database connections
-- **📄 Pagination**: Memory-efficient large dataset handling
-- **🗂️ Database Indexing**: Optimized query performance
-- **💾 Future Caching**: Redis integration planned
-
-### **Scalability Considerations**
-
-- **🔄 Horizontal Scaling**: Stateless application design
-- **📊 Load Balancing**: Ready for multiple instances
-- **🗄️ Database Scaling**: Read replicas and sharding support
-- **📡 Message Queuing**: Event-driven architecture for async processing
-
-## 🤝 Contributing
-
-### **Development Workflow**
-
-1. **Fork** the repository
-2. **Create** a feature branch: `git checkout -b feature/amazing-feature`
-3. **Install** development dependencies: `poetry install --with dev`
-4. **Make** your changes with proper tests
-5. **Run** quality checks: `make lint test`
-6. **Commit** with conventional commits: `git commit -m "feat: add amazing feature"`
-7. **Push** to your branch: `git push origin feature/amazing-feature`
-8. **Create** a Pull Request
-
-### **Code Standards**
-
-- **🎯 Clean Architecture**: Follow established patterns
-- **📝 Documentation**: Document all public APIs
-- **🧪 Testing**: Maintain 95%+ test coverage
-- **🔍 Type Hints**: Full type annotation required
-- **📏 Code Style**: Black + isort + ruff compliance
-
-### **Pull Request Process**
-
-1. Ensure all tests pass and coverage remains high
-2. Update documentation for new features
-3. Add integration tests for new endpoints
-4. Follow semantic versioning for changes
-5. Request review from maintainers
-
-## 📄 License
-
-This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
-
-## 🙏 Acknowledgments
-
-- **[USGS](https://earthquake.usgs.gov/)** - Earthquake data provider
-- **[FastAPI](https://fastapi.tiangolo.com/)** - Modern Python web framework
-- **[SQLAlchemy](https://www.sqlalchemy.org/)** - Database ORM
-- **[Pydantic](https://pydantic-docs.helpmanual.io/)** - Data validation
-- **Clean Architecture** - Robert C. Martin's architectural pattern
 
 ---
 
