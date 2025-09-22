@@ -69,16 +69,25 @@ def client():
 
     # Set testing environment to allow permissive CORS/hosts
     os.environ["TESTING"] = "true"
-    # Use auto-detected host for database connection
-    db_host = _detect_db_host()
 
-    # Setup local database if needed
-    _setup_local_test_db(db_host)
+    # Respect existing REPOSITORY_TYPE (e.g., from GitHub Actions or Docker)
+    # Default to postgresql for local development when not set
+    repository_type = os.environ.get("REPOSITORY_TYPE", "postgresql")
 
-    os.environ["DATABASE_URL"] = (
-        f"postgresql://postgres:password@{db_host}:5432/earthquake_monitor_dev"
-    )
-    os.environ["REPOSITORY_TYPE"] = "postgresql"
+    # Only setup database if using postgresql repository
+    if repository_type == "postgresql":
+        # Use auto-detected host for database connection
+        db_host = _detect_db_host()
+
+        # Setup local database if needed
+        _setup_local_test_db(db_host)
+
+        os.environ["DATABASE_URL"] = (
+            f"postgresql://postgres:password@{db_host}:5432/earthquake_monitor_dev"
+        )
+
+    # Set the repository type (only override if not already set)
+    os.environ["REPOSITORY_TYPE"] = repository_type
 
     # Reset the security service to ensure clean JWT state
     reset_security_service()
