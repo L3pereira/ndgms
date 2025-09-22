@@ -13,10 +13,11 @@ from .models import Base
 
 def create_async_engine(database_url: str, **kwargs):
     """Create async engine with consistent configuration."""
+    import os
+
     # Default configuration for Docker/CI compatibility
     default_kwargs = {
         "echo": True,
-        "pool_pre_ping": True,
         "pool_recycle": 300,
         "connect_args": {
             "server_settings": {
@@ -25,6 +26,14 @@ def create_async_engine(database_url: str, **kwargs):
             "command_timeout": 60,
         },
     }
+
+    # Only enable pool_pre_ping in production, not in tests
+    if (
+        os.getenv("REPOSITORY_TYPE") == "postgresql"
+        and "test" not in database_url.lower()
+    ):
+        default_kwargs["pool_pre_ping"] = True
+
     default_kwargs.update(kwargs)
 
     return _create_async_engine(database_url, **default_kwargs)
