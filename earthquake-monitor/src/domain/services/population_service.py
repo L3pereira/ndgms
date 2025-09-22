@@ -1,6 +1,8 @@
+import os
 from abc import ABC, abstractmethod
 
 from ..entities.location import Location
+from .population_config import PopulationCenter, PopulationCenterConfig
 
 
 class PopulationService(ABC):
@@ -20,35 +22,59 @@ class PopulationService(ABC):
 
 
 class PopulationServiceImpl(PopulationService):
-    """Implementation of population service with basic logic."""
+    """Implementation of population service with configurable population centers."""
 
-    def __init__(self, populated_areas: list[tuple] = None):
-        self._populated_areas = populated_areas or [
-            (37.7749, -122.4194),  # San Francisco
-            (34.0522, -118.2437),  # Los Angeles
-            (40.7128, -74.0060),  # New York
-            (35.6762, 139.6503),  # Tokyo
-            (55.7558, 37.6176),  # Moscow
-        ]
+    def __init__(self, population_centers: list[PopulationCenter] = None):
+        """Initialize with population centers from config or environment."""
+        if population_centers is None:
+            env_centers = os.getenv("POPULATION_CENTERS", "")
+            if env_centers:
+                self._population_centers = PopulationCenterConfig.from_env_string(
+                    env_centers
+                )
+            else:
+                self._population_centers = (
+                    PopulationCenterConfig.get_default_population_centers()
+                )
+        else:
+            self._population_centers = population_centers
 
     async def is_near_populated_area(self, location: Location) -> bool:
-        """Check if location is within 100km of any populated area."""
-        for lat, lon in self._populated_areas:
-            area_location = Location(lat, lon, 0)
-            if location.distance_to(area_location) < 100:
+        """Check if location is within threshold distance of any populated area."""
+        for center in self._population_centers:
+            center_location = Location(center.latitude, center.longitude, 0)
+            if location.distance_to(center_location) < center.proximity_threshold_km:
                 return True
         return False
 
     async def get_affected_population_estimate(
         self, center: Location, radius_km: float
     ) -> int:
-        """Simple population estimation based on proximity to known areas."""
+        """Estimate population based on proximity to known populated centers."""
         total_population = 0
-        for lat, lon in self._populated_areas:
-            area_location = Location(lat, lon, 0)
-            distance = center.distance_to(area_location)
+        for pop_center in self._population_centers:
+            center_location = Location(pop_center.latitude, pop_center.longitude, 0)
+            distance = center.distance_to(center_location)
             if distance < radius_km:
                 # Simple calculation: closer areas contribute more
                 factor = max(0, 1 - (distance / radius_km))
-                total_population += int(1000000 * factor)  # Base 1M per area
+                # Use different base populations for different cities
+                base_population = self._get_base_population(pop_center.name)
+                total_population += int(base_population * factor)
         return total_population
+
+    def _get_base_population(self, city_name: str) -> int:
+        """Get estimated base population for major cities."""
+        population_estimates = {
+            "Tokyo": 37_400_000,
+            "New York": 8_400_000,
+            "Los Angeles": 4_000_000,
+            "San Francisco": 880_000,
+            "London": 9_000_000,
+            "Moscow": 12_500_000,
+            "Mexico City": 21_800_000,
+            "Beijing": 21_500_000,
+            "Mumbai": 20_400_000,
+            "São Paulo": 12_300_000,
+        }
+        return population_estimates.get(city_name, 1_000_000)  # Default 1M

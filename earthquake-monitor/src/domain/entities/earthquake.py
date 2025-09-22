@@ -2,6 +2,7 @@ from dataclasses import dataclass, field
 from datetime import UTC, datetime
 from uuid import uuid4
 
+from ..exceptions import InvalidDateTimeError
 from .location import Location
 from .magnitude import Magnitude
 
@@ -18,12 +19,16 @@ class Earthquake:
     def __post_init__(self):
         # Convert naive datetime to UTC if needed
         if self.occurred_at.tzinfo is None:
-            current_time = datetime.now()
-        else:
-            current_time = datetime.now(UTC)
+            # Treat naive datetime as UTC
+            object.__setattr__(
+                self, "occurred_at", self.occurred_at.replace(tzinfo=UTC)
+            )
 
+        current_time = datetime.now(UTC)
         if self.occurred_at > current_time:
-            raise ValueError("Earthquake occurrence time cannot be in the future")
+            raise InvalidDateTimeError(
+                "Earthquake occurrence time cannot be in the future"
+            )
 
     @property
     def id(self) -> str:

@@ -1,6 +1,7 @@
 import pytest
 
 from src.domain.entities.magnitude import Magnitude, MagnitudeScale
+from src.domain.exceptions import InvalidMagnitudeError
 
 
 class TestMagnitude:
@@ -14,11 +15,15 @@ class TestMagnitude:
         assert magnitude.scale == MagnitudeScale.MOMENT
 
     def test_negative_value_raises_error(self):
-        with pytest.raises(ValueError, match="Magnitude value must be non-negative"):
+        with pytest.raises(
+            InvalidMagnitudeError, match="Magnitude value must be non-negative"
+        ):
             Magnitude(value=-1.0)
 
     def test_value_exceeding_maximum_raises_error(self):
-        with pytest.raises(ValueError, match="Magnitude value cannot exceed 12"):
+        with pytest.raises(
+            InvalidMagnitudeError, match="Magnitude value cannot exceed 12"
+        ):
             Magnitude(value=13.0)
 
     def test_is_significant_true(self):

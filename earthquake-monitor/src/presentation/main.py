@@ -1,4 +1,5 @@
 import logging
+import os
 import time
 from collections.abc import Callable
 
@@ -25,22 +26,115 @@ logger = logging.getLogger(__name__)
 
 app = FastAPI(
     title="Earthquake Monitor API",
-    description="A real-time earthquake monitoring system with WebSocket support",
-    version="0.1.0",
+    description="""
+    # 🌍 NDGMS Earthquake Monitoring System
+
+    A comprehensive real-time earthquake monitoring system that ingests data from USGS,
+    provides secure API access, and delivers real-time updates via WebSocket.
+
+    ## 🚀 Features
+
+    - **Real-time Data Ingestion** from USGS earthquake feeds
+    - **Secure RESTful API** with OAuth2 JWT authentication
+    - **WebSocket Support** for live earthquake updates
+    - **Advanced Filtering** by magnitude, time range, location, and source
+    - **Comprehensive Pagination** for large datasets
+    - **Clean Architecture** with domain-driven design
+
+    ## 🔐 Authentication
+
+    All endpoints (except `/health` and auth endpoints) require Bearer token authentication.
+
+    1. **Register** a new account: `POST /api/v1/auth/register`
+    2. **Login** to get access token: `POST /api/v1/auth/login`
+    3. **Use token** in Authorization header: `Bearer <your_token>`
+
+    ## 📡 Real-time Updates
+
+    Connect to WebSocket endpoint `/api/v1/ws` for real-time earthquake notifications.
+
+    ## 🗄️ Data Sources
+
+    - **USGS**: United States Geological Survey earthquake data
+    - **Manual Input**: Direct earthquake data entry via API
+
+    ---
+
+    **Built with Clean Architecture • FastAPI • PostgreSQL • WebSocket**
+    """,
+    version="1.0.0",
+    contact={
+        "name": "NDGMS Team",
+        "url": "https://github.com/your-org/ndgms",
+        "email": "contact@ndgms.org",
+    },
+    license_info={
+        "name": "MIT License",
+        "url": "https://opensource.org/licenses/MIT",
+    },
+    servers=[
+        {"url": "http://localhost:8000", "description": "Development server"},
+        {"url": "https://api.ndgms.org", "description": "Production server"},
+    ],
+    tags_metadata=[
+        {
+            "name": "earthquakes",
+            "description": "Earthquake data management and retrieval operations",
+        },
+        {
+            "name": "auth",
+            "description": "Authentication and user management endpoints",
+        },
+        {
+            "name": "ingestion",
+            "description": "Data ingestion from external sources like USGS",
+        },
+        {
+            "name": "websocket",
+            "description": "Real-time WebSocket connections for live updates",
+        },
+    ],
 )
 
+
 # Add middleware
+def get_allowed_origins() -> list[str]:
+    """Get allowed CORS origins from environment or default to secure values."""
+    # Allow all origins in test environment
+    if os.getenv("TESTING") == "true" or os.getenv("PYTEST_CURRENT_TEST"):
+        return ["*"]
+
+    origins_env = os.getenv("ALLOWED_ORIGINS", "")
+    if origins_env:
+        return [origin.strip() for origin in origins_env.split(",")]
+    # Default secure origins for development
+    return ["http://localhost:3000", "http://127.0.0.1:3000", "http://localhost:8000"]
+
+
+def get_allowed_hosts() -> list[str]:
+    """Get allowed hosts from environment or default to secure values."""
+    # Allow all hosts in test environment
+    if os.getenv("TESTING") == "true" or os.getenv("PYTEST_CURRENT_TEST"):
+        return ["*"]
+
+    hosts_env = os.getenv("ALLOWED_HOSTS", "")
+    if hosts_env:
+        return [host.strip() for host in hosts_env.split(",")]
+    # Default secure hosts for development
+    return ["localhost", "127.0.0.1", "0.0.0.0"]
+
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],  # Configure for specific domains in production
+    allow_origins=get_allowed_origins(),
     allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
+    allow_methods=["GET", "POST", "PUT", "DELETE", "OPTIONS"],
+    allow_headers=["Authorization", "Content-Type"],
 )
 
 app.add_middleware(
     TrustedHostMiddleware,
-    allowed_hosts=["*"],  # Configure for specific hosts in production
+    allowed_hosts=get_allowed_hosts(),
 )
 
 

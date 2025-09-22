@@ -1,6 +1,8 @@
 from dataclasses import dataclass
 from enum import Enum
 
+from ..exceptions import InvalidMagnitudeError
+
 
 class MagnitudeScale(Enum):
     RICHTER = "richter"
@@ -16,9 +18,9 @@ class Magnitude:
 
     def __post_init__(self):
         if self.value < 0:
-            raise ValueError("Magnitude value must be non-negative")
+            raise InvalidMagnitudeError("Magnitude value must be non-negative")
         if self.value > 12:
-            raise ValueError("Magnitude value cannot exceed 12")
+            raise InvalidMagnitudeError("Magnitude value cannot exceed 12")
 
     def is_significant(self) -> bool:
         """Check if magnitude is significant (5.0 or greater)."""

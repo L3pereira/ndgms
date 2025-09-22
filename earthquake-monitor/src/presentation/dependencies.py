@@ -15,8 +15,9 @@ class MockEarthquakeRepository(EarthquakeRepository):
     def __init__(self):
         self._earthquakes = {}
 
-    async def save(self, earthquake) -> None:
+    async def save(self, earthquake) -> str:
         self._earthquakes[earthquake.id] = earthquake
+        return earthquake.id
 
     async def find_by_id(self, earthquake_id: str):
         return self._earthquakes.get(earthquake_id)
@@ -129,6 +130,13 @@ class MockEarthquakeRepository(EarthquakeRepository):
                 results = [eq for eq in results if eq.source == filters["source"]]
 
         return len(results)
+
+    async def find_all(self):
+        """Find all earthquakes."""
+        results = list(self._earthquakes.values())
+        # Sort by occurred_at descending (newest first)
+        results.sort(key=lambda x: x.occurred_at, reverse=True)
+        return results
 
 
 # Get the appropriate repository dependency function

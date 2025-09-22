@@ -7,6 +7,9 @@ import pytest_asyncio
 from fastapi.testclient import TestClient
 from httpx import ASGITransport, AsyncClient
 
+# Set testing environment at module level
+os.environ["TESTING"] = "true"
+
 from src.presentation.main import app
 
 # Import test database fixtures
@@ -24,6 +27,8 @@ def client():
     from src.presentation.auth.repository import get_user_repository
     from src.presentation.auth.security import reset_security_service
 
+    # Set testing environment to allow permissive CORS/hosts
+    os.environ["TESTING"] = "true"
     # Ensure we use mock repository for regular integration tests
     os.environ["REPOSITORY_TYPE"] = "mock"
 
@@ -42,6 +47,8 @@ def client():
 @pytest_asyncio.fixture
 async def client_with_db(test_db_manager):  # noqa: F811
     """Create an async test client for the FastAPI app with real database."""
+    # Set testing environment to allow permissive CORS/hosts
+    os.environ["TESTING"] = "true"
     # Set environment to use test database
     os.environ["DATABASE_URL"] = test_db_manager.test_db_url
     os.environ["REPOSITORY_TYPE"] = "postgresql"

@@ -3,11 +3,9 @@ from unittest.mock import AsyncMock, Mock
 
 import pytest
 
+from src.application.dto.create_earthquake_request import CreateEarthquakeRequest
 from src.application.events.event_publisher import EventPublisher
-from src.application.use_cases.create_earthquake import (
-    CreateEarthquakeRequest,
-    CreateEarthquakeUseCase,
-)
+from src.application.use_cases.create_earthquake import CreateEarthquakeUseCase
 from src.domain.repositories.earthquake_repository import EarthquakeRepository
 
 

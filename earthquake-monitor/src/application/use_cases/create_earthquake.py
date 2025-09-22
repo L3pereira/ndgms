@@ -1,32 +1,12 @@
-from datetime import UTC, datetime
-
+from src.application.dto.create_earthquake_request import CreateEarthquakeRequest
 from src.application.events.event_publisher import EventPublisher
 from src.domain.entities.earthquake import Earthquake
 from src.domain.entities.location import Location
 from src.domain.entities.magnitude import Magnitude, MagnitudeScale
 from src.domain.events.earthquake_detected import EarthquakeDetected
 from src.domain.events.high_magnitude_alert import HighMagnitudeAlert
+from src.domain.exceptions import InvalidEarthquakeDataError
 from src.domain.repositories.earthquake_repository import EarthquakeRepository
-
-
-class CreateEarthquakeRequest:
-    def __init__(
-        self,
-        latitude: float,
-        longitude: float,
-        depth: float,
-        magnitude_value: float,
-        magnitude_scale: str = "moment",
-        occurred_at: datetime = None,
-        source: str = "USGS",
-    ):
-        self.latitude = latitude
-        self.longitude = longitude
-        self.depth = depth
-        self.magnitude_value = magnitude_value
-        self.magnitude_scale = magnitude_scale
-        self.occurred_at = occurred_at or datetime.now(UTC)
-        self.source = source
 
 
 class CreateEarthquakeUseCase:
@@ -39,6 +19,9 @@ class CreateEarthquakeUseCase:
         self._event_publisher = event_publisher
 
     async def execute(self, request: CreateEarthquakeRequest) -> str:
+        """Execute the create earthquake use case with validation."""
+        self._validate_request(request)
+
         # Create value objects
         location = Location(
             latitude=request.latitude,
@@ -56,6 +39,12 @@ class CreateEarthquakeUseCase:
             occurred_at=request.occurred_at,
             source=request.source,
         )
+
+        # Set additional attributes if provided
+        if request.external_id:
+            earthquake.external_id = request.external_id
+        if request.raw_data:
+            earthquake.raw_data = request.raw_data
 
         # Save to repository
         await self._earthquake_repository.save(earthquake)
@@ -89,3 +78,21 @@ class CreateEarthquakeUseCase:
             await self._event_publisher.publish(high_magnitude_alert)
 
         return earthquake.id
+
+    def _validate_request(self, request: CreateEarthquakeRequest) -> None:
+        """Validate the create earthquake request."""
+        if not request.source or not request.source.strip():
+            raise InvalidEarthquakeDataError("Source cannot be empty")
+
+        if request.magnitude_scale not in [
+            "richter",
+            "moment",
+            "body_wave",
+            "surface_wave",
+        ]:
+            raise InvalidEarthquakeDataError(
+                f"Invalid magnitude scale: {request.magnitude_scale}"
+            )
+
+        if request.external_id and len(request.external_id) > 100:
+            raise InvalidEarthquakeDataError("External ID cannot exceed 100 characters")

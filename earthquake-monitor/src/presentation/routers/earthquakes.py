@@ -2,11 +2,9 @@ from typing import Annotated
 
 from fastapi import APIRouter, Depends, Query, status
 
+from src.application.dto.create_earthquake_request import CreateEarthquakeRequest
 from src.application.dto.earthquake_dto import EarthquakeFilters, PaginationParams
-from src.application.use_cases.create_earthquake import (
-    CreateEarthquakeRequest,
-    CreateEarthquakeUseCase,
-)
+from src.application.use_cases.create_earthquake import CreateEarthquakeUseCase
 from src.application.use_cases.get_earthquake_details import GetEarthquakeDetailsUseCase
 from src.application.use_cases.get_earthquakes import GetEarthquakesUseCase
 
@@ -31,7 +29,36 @@ router = APIRouter(prefix="/earthquakes", tags=["earthquakes"])
 
 
 @router.post(
-    "/", response_model=EarthquakeResponseSchema, status_code=status.HTTP_201_CREATED
+    "/",
+    response_model=EarthquakeResponseSchema,
+    status_code=status.HTTP_201_CREATED,
+    summary="Create a new earthquake record",
+    description="""
+    Create a new earthquake record in the system.
+
+    This endpoint allows manual entry of earthquake data, typically used for:
+    - Testing purposes
+    - Manual data entry from alternative sources
+    - Data migration from legacy systems
+
+    **Note**: This endpoint requires authentication.
+    """,
+    responses={
+        201: {
+            "description": "Earthquake created successfully",
+            "content": {
+                "application/json": {
+                    "example": {
+                        "id": "123e4567-e89b-12d3-a456-426614174000",
+                        "message": "Earthquake created successfully",
+                    }
+                }
+            },
+        },
+        400: {"description": "Invalid earthquake data"},
+        401: {"description": "Authentication required"},
+        422: {"description": "Validation error"},
+    },
 )
 async def create_earthquake(
     earthquake_data: CreateEarthquakeSchema,
@@ -56,10 +83,65 @@ async def create_earthquake(
     )
 
 
-@router.get("/", response_model=EarthquakeListResponseSchema)
+@router.get(
+    "/",
+    response_model=EarthquakeListResponseSchema,
+    summary="List earthquakes with filtering and pagination",
+    description="""
+    Retrieve a paginated list of earthquakes with comprehensive filtering options.
+
+    ## 🔍 Available Filters:
+    - **Magnitude Range**: Filter by minimum and maximum magnitude
+    - **Time Range**: Filter by date/time range when earthquakes occurred
+    - **Geographic Location**: Filter by radius around a specific location
+    - **Data Source**: Filter by earthquake data source (e.g., USGS)
+    - **Review Status**: Filter by review status
+
+    ## 📄 Pagination:
+    - Use `limit` and `offset` for pagination
+    - Default limit is 50, maximum is 1000
+
+    **Example**: Get recent high-magnitude earthquakes:
+    `GET /earthquakes?min_magnitude=6.0&limit=10&start_time=2024-01-01T00:00:00Z`
+    """,
+    responses={
+        200: {
+            "description": "List of earthquakes with pagination metadata",
+            "content": {
+                "application/json": {
+                    "example": {
+                        "earthquakes": [
+                            {
+                                "id": "us6000abcd",
+                                "magnitude": {"value": 7.2, "scale": "moment"},
+                                "location": {
+                                    "latitude": 35.5,
+                                    "longitude": -120.5,
+                                    "depth": 10.5,
+                                },
+                                "occurred_at": "2024-01-15T14:30:00Z",
+                                "source": "USGS",
+                            }
+                        ],
+                        "pagination": {
+                            "total": 150,
+                            "limit": 50,
+                            "offset": 0,
+                            "has_next": True,
+                        },
+                    }
+                }
+            },
+        },
+        401: {"description": "Authentication required"},
+        422: {"description": "Invalid filter parameters"},
+    },
+)
 async def get_earthquakes(
     use_case: Annotated[GetEarthquakesUseCase, Depends(get_get_earthquakes_use_case)],
-    min_magnitude: Annotated[float, Query(ge=0, le=12)] = None,
+    min_magnitude: Annotated[
+        float, Query(ge=0, le=12, description="Minimum earthquake magnitude (0-12)")
+    ] = None,
     max_magnitude: Annotated[float, Query(ge=0, le=12)] = None,
     start_time: Annotated[str, Query()] = None,
     end_time: Annotated[str, Query()] = None,

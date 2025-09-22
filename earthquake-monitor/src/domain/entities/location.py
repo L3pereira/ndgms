@@ -1,6 +1,8 @@
 import math
 from dataclasses import dataclass
 
+from ..exceptions import InvalidLocationError
+
 
 @dataclass(frozen=True)
 class Location:
@@ -10,11 +12,11 @@ class Location:
 
     def __post_init__(self):
         if not -90 <= self.latitude <= 90:
-            raise ValueError("Latitude must be between -90 and 90 degrees")
+            raise InvalidLocationError("Latitude must be between -90 and 90 degrees")
         if not -180 <= self.longitude <= 180:
-            raise ValueError("Longitude must be between -180 and 180 degrees")
+            raise InvalidLocationError("Longitude must be between -180 and 180 degrees")
         if self.depth < 0:
-            raise ValueError("Depth must be non-negative")
+            raise InvalidLocationError("Depth must be non-negative")
 
     def distance_to(self, other: "Location") -> float:
         """Calculate distance to another location using Haversine formula."""
@@ -34,19 +36,18 @@ class Location:
         return R * c
 
     def is_near_populated_area(self) -> bool:
-        """Check if location is near a populated area (simplified logic)."""
-        # This is a simplified implementation
-        # In reality, this would check against a database of populated areas
-        populated_areas = [
-            (37.7749, -122.4194),  # San Francisco
-            (34.0522, -118.2437),  # Los Angeles
-            (40.7128, -74.0060),  # New York
-            (35.6762, 139.6503),  # Tokyo
-            (55.7558, 37.6176),  # Moscow
-        ]
+        """Check if location is near a populated area.
 
-        for lat, lon in populated_areas:
-            area_location = Location(lat, lon, 0)
-            if self.distance_to(area_location) < 100:  # Within 100km
+        Note: This method provides a basic implementation for backward compatibility.
+        For more accurate results, use PopulationService directly.
+        """
+        # Basic implementation using default population centers
+        from ..services.population_config import PopulationCenterConfig
+
+        population_centers = PopulationCenterConfig.get_default_population_centers()
+
+        for center in population_centers:
+            center_location = Location(center.latitude, center.longitude, 0)
+            if self.distance_to(center_location) < center.proximity_threshold_km:
                 return True
         return False

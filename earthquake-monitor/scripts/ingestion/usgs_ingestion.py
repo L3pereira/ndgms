@@ -11,10 +11,8 @@ from typing import Any
 
 import httpx
 
-from src.application.use_cases.create_earthquake import (
-    CreateEarthquakeRequest,
-    CreateEarthquakeUseCase,
-)
+from src.application.dto.create_earthquake_request import CreateEarthquakeRequest
+from src.application.use_cases.create_earthquake import CreateEarthquakeUseCase
 from src.presentation.dependencies import get_earthquake_repository
 
 

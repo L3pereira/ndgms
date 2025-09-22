@@ -8,8 +8,8 @@ class EarthquakeRepository(ABC):
     """Abstract repository interface for earthquake data operations."""
 
     @abstractmethod
-    async def save(self, earthquake: Earthquake) -> None:
-        """Save an earthquake to the repository."""
+    async def save(self, earthquake: Earthquake) -> str:
+        """Save an earthquake to the repository and return its ID."""
         pass
 
     @abstractmethod
@@ -61,4 +61,9 @@ class EarthquakeRepository(ABC):
     @abstractmethod
     async def count_with_filters(self, filters: dict | None = None) -> int:
         """Count earthquakes matching the given filters."""
+        pass
+
+    @abstractmethod
+    async def find_all(self) -> list[Earthquake]:
+        """Find all earthquakes."""
         pass
