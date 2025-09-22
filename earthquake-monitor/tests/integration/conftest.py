@@ -16,83 +16,62 @@ from src.presentation.main import app
 from .test_database_setup import (  # noqa: F401
     db_session,
     seed_test_data,
-    test_db_manager,
 )
 
 
-@pytest.fixture
-def client():
-    """Create a test client for the FastAPI app with clean database state."""
-    from src.infrastructure.database.config import SessionLocal
+@pytest.fixture(scope="session")
+def test_client_session(test_db_manager):
+    """Create a session-scoped test client with shared database engine."""
+    from sqlalchemy.ext.asyncio import AsyncSession
+    from sqlalchemy.orm import sessionmaker
+
+    from src.infrastructure.database.config import (
+        SessionLocal,
+        create_async_engine,
+        get_async_session,
+    )
     from src.infrastructure.database.models import UserModel
     from src.presentation.auth.models import UserCreate
     from src.presentation.auth.repository import get_user_repository
     from src.presentation.auth.security import reset_security_service
 
-    # Auto-detect database host and setup
-    def _detect_db_host():
-        import socket
-
-        try:
-            socket.gethostbyname("db")
-            return "db"  # Running in Docker
-        except (socket.gaierror, socket.herror):
-            return "localhost"  # Running locally
-
-    def _setup_local_test_db(db_host):
-        """Ensure test database exists for local testing."""
-        if db_host == "localhost":
-            try:
-                from sqlalchemy import create_engine, text
-
-                # Connect to postgres database to create test database
-                engine = create_engine(
-                    "postgresql://postgres:password@localhost:5432/postgres",
-                    isolation_level="AUTOCOMMIT",
-                )
-                with engine.connect() as conn:
-                    # Check if test database exists
-                    result = conn.execute(
-                        text("SELECT 1 FROM pg_database WHERE datname = :db_name"),
-                        {"db_name": "earthquake_monitor_dev"},
-                    )
-                    if not result.fetchone():
-                        # Create test database
-                        conn.execute(text("CREATE DATABASE earthquake_monitor_dev"))
-                        print("✅ Created local test database: earthquake_monitor_dev")
-                engine.dispose()
-            except Exception as e:
-                print(f"⚠️  Could not setup local test database: {e}")
-                print(
-                    "📝 Please create database 'earthquake_monitor_dev' manually or run PostgreSQL"
-                )
-
     # Set testing environment to allow permissive CORS/hosts
     os.environ["TESTING"] = "true"
+    # Force postgresql for all integration tests
+    os.environ["REPOSITORY_TYPE"] = "postgresql"
+    # Use test database from test_db_manager
+    os.environ["DATABASE_URL"] = test_db_manager.test_db_url
 
-    # Respect existing REPOSITORY_TYPE (e.g., from GitHub Actions or Docker)
-    # Default to postgresql for local development when not set
-    repository_type = os.environ.get("REPOSITORY_TYPE", "postgresql")
+    # Create a shared test engine for the entire session
+    test_async_engine = create_async_engine(
+        test_db_manager.test_db_url.replace("postgresql://", "postgresql+asyncpg://"),
+        pool_size=5,
+        max_overflow=10,
+        pool_pre_ping=False,
+        echo=False,
+    )
 
-    # Only setup database if using postgresql repository
-    if repository_type == "postgresql":
-        # Use auto-detected host for database connection
-        db_host = _detect_db_host()
+    TestAsyncSessionLocal = sessionmaker(
+        test_async_engine, class_=AsyncSession, expire_on_commit=False
+    )
 
-        # Setup local database if needed
-        _setup_local_test_db(db_host)
+    # Override the async session dependency
+    async def override_get_async_session():
+        async with TestAsyncSessionLocal() as session:
+            try:
+                yield session
+            except Exception:
+                await session.rollback()
+                raise
+            finally:
+                await session.close()
 
-        os.environ["DATABASE_URL"] = (
-            f"postgresql://postgres:password@{db_host}:5432/earthquake_monitor_dev"
-        )
-
-    # Set the repository type (only override if not already set)
-    os.environ["REPOSITORY_TYPE"] = repository_type
+    app.dependency_overrides[get_async_session] = override_get_async_session
 
     # Reset the security service to ensure clean JWT state
     reset_security_service()
 
-    # Clean up existing test users before creating new ones
+    # Setup database users using synchronous session (once per session)
     session = SessionLocal()
     try:
         # Delete existing test users to ensure clean state
@@ -101,8 +80,8 @@ def client():
                 [
                     "admin@earthquake-monitor.com",
                     "test@earthquake-monitor.com",
-                    "newuser@example.com",  # Common test email
-                    "duplicate@example.com",  # Common test email
+                    "newuser@example.com",
+                    "duplicate@example.com",
                 ]
             )
         ).delete(synchronize_session=False)
@@ -133,7 +112,16 @@ def client():
     finally:
         session.close()
 
-    return TestClient(app)
+    yield TestClient(app)
+
+    # Clean up dependency override at end of session
+    app.dependency_overrides.clear()
+
+
+@pytest.fixture
+def client(test_client_session):
+    """Function-scoped client that reuses the session-scoped client."""
+    return test_client_session
 
 
 @pytest_asyncio.fixture
@@ -154,27 +142,24 @@ async def client_with_db(test_db_manager):  # noqa: F811
         get_async_session,
     )
 
-    async def override_get_async_session():
-        # Create a fresh engine and session for each request
-        test_engine = create_async_engine(
-            test_db_manager.test_db_url.replace(
-                "postgresql://", "postgresql+asyncpg://"
-            )
-        )
-        TestSessionLocal = sessionmaker(
-            test_engine, class_=AsyncSession, expire_on_commit=False
-        )
+    # Create a single engine for the entire test
+    test_engine = create_async_engine(
+        test_db_manager.test_db_url.replace("postgresql://", "postgresql+asyncpg://"),
+        pool_size=1,
+        max_overflow=0,
+        echo=False,
+    )
+    TestSessionLocal = sessionmaker(
+        test_engine, class_=AsyncSession, expire_on_commit=False
+    )
 
+    async def override_get_async_session():
         async with TestSessionLocal() as session:
             try:
                 yield session
             except Exception:
                 await session.rollback()
                 raise
-            finally:
-                await session.close()
-
-        await test_engine.dispose()
 
     app.dependency_overrides[get_async_session] = override_get_async_session
 
@@ -239,6 +224,8 @@ async def client_with_db(test_db_manager):  # noqa: F811
     finally:
         # Clean up dependency override
         app.dependency_overrides.clear()
+        # Dispose the test engine
+        await test_engine.dispose()
 
 
 @pytest.fixture
@@ -254,6 +241,16 @@ def auth_headers(client):
     else:
         # Fallback: return empty headers for tests that expect auth failure
         return {}
+
+
+@pytest_asyncio.fixture(autouse=True)
+async def cleanup_earthquake_data():
+    """Clean up earthquake data after each test."""
+    yield  # Run the test
+
+    # Skip cleanup to avoid event loop conflicts for now
+    # TODO: Implement proper async cleanup if needed
+    pass
 
 
 @pytest.fixture

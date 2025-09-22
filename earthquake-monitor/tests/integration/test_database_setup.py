@@ -182,26 +182,28 @@ async def db_session(test_db_manager) -> AsyncGenerator[AsyncSession, None]:
     # Use the same host detection as the test manager
     db_host = test_db_manager._detect_db_host()
     test_engine = create_async_engine(
-        f"postgresql+asyncpg://postgres:password@{db_host}:5432/{test_db_manager.test_db_name}"
+        f"postgresql+asyncpg://postgres:password@{db_host}:5432/{test_db_manager.test_db_name}",
+        pool_size=1,
+        max_overflow=0,
+        echo=False,
     )
     TestSessionLocal = sessionmaker(
         test_engine, class_=AsyncSessionClass, expire_on_commit=False
     )
 
     # Create session and yield it directly
-    session = TestSessionLocal()
-    try:
-        yield session
-    finally:
-        # Clean up: close session and dispose engine
+    async with TestSessionLocal() as session:
         try:
+            yield session
+        except Exception:
+            await session.rollback()
+            raise
+        finally:
+            # Ensure session is closed properly
             await session.close()
-        except Exception:
-            pass
-        try:
-            await test_engine.dispose()
-        except Exception:
-            pass
+
+    # Dispose engine after session is closed
+    await test_engine.dispose()
 
 
 @pytest_asyncio.fixture

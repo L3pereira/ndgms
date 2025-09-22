@@ -1,5 +1,6 @@
 """Integration tests for API security and middleware."""
 
+import pytest
 from fastapi.testclient import TestClient
 
 
@@ -104,20 +105,23 @@ class TestAPISecurity:
         )
         assert response.status_code == 422
 
-    def test_sql_injection_protection(
-        self, client: TestClient, sample_earthquake_data: dict
+    @pytest.mark.asyncio
+    async def test_sql_injection_protection(
+        self, client_with_db, sample_earthquake_data: dict
     ):
         """Test protection against SQL injection attempts."""
         # Attempt SQL injection in earthquake data
         malicious_data = sample_earthquake_data.copy()
         malicious_data["event_id"] = "'; DROP TABLE earthquakes; --"
 
-        response = client.post("/api/v1/earthquakes/", json=malicious_data)
+        response = await client_with_db.post(
+            "/api/v1/earthquakes/", json=malicious_data
+        )
         # Should either create successfully (if properly sanitized) or reject
         assert response.status_code in [201, 400, 422]
 
         # Attempt SQL injection in query parameters
-        response = client.get(
+        response = await client_with_db.get(
             "/api/v1/earthquakes/?source='; DROP TABLE earthquakes; --"
         )
         assert response.status_code in [200, 400, 422]
@@ -162,22 +166,26 @@ class TestAPISecurity:
         if present_headers:
             print(f"Rate limiting headers found: {present_headers}")
 
-    def test_error_response_format(self, client: TestClient):
+    @pytest.mark.asyncio
+    async def test_error_response_format(self, client_with_db):
         """Test that error responses follow consistent format."""
-        # Test 404 error
-        response = client.get("/api/v1/earthquakes/non-existent-id")
+        import uuid
+
+        # Test 404 error with proper UUID format
+        non_existent_uuid = str(uuid.uuid4())
+        response = await client_with_db.get(f"/api/v1/earthquakes/{non_existent_uuid}")
         assert response.status_code == 404
         error_data = response.json()
         assert "detail" in error_data
 
         # Test 422 validation error
-        response = client.post("/api/v1/auth/register", json={})
+        response = await client_with_db.post("/api/v1/auth/register", json={})
         assert response.status_code == 422
         error_data = response.json()
         assert "detail" in error_data
 
         # Test 401 authentication error
-        response = client.post(
+        response = await client_with_db.post(
             "/api/v1/auth/login",
             json={"email": "nonexistent@example.com", "password": "wrongpassword"},
         )

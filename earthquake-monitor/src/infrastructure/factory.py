@@ -18,7 +18,7 @@ async def create_earthquake_repository(
     session: Annotated[AsyncSession, Depends(get_async_session)] = None,
 ) -> EarthquakeRepository:
     """Factory function to create the appropriate earthquake repository."""
-    repository_type = os.getenv("REPOSITORY_TYPE", "mock")
+    repository_type = os.getenv("REPOSITORY_TYPE", "postgresql")
 
     if repository_type.lower() == "postgresql" and session is not None:
         return PostgreSQLEarthquakeRepository(session)
@@ -30,7 +30,7 @@ async def create_earthquake_repository(
 # For dependency injection in FastAPI
 def get_earthquake_repository_factory():
     """Get the earthquake repository factory function."""
-    repository_type = os.getenv("REPOSITORY_TYPE", "mock")
+    repository_type = os.getenv("REPOSITORY_TYPE", "postgresql")
 
     if repository_type.lower() == "postgresql":
         # Return a dependency that requires database session
