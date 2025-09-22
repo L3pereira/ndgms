@@ -80,7 +80,6 @@ docker-compose up --build
 - Python 3.12+
 - PostgreSQL 15+ with PostGIS 3.3+ extension
 - Docker & Docker Compose (optional)
-- Redis (optional, for caching)
 
 ### **Local Development Setup**
 
