@@ -16,11 +16,12 @@ from src.presentation.main import app
 from .test_database_setup import (  # noqa: F401
     db_session,
     seed_test_data,
+    test_db_manager,
 )
 
 
 @pytest.fixture(scope="session")
-def test_client_session(test_db_manager):
+def test_client_session(test_db_manager):  # noqa: F811
     """Create a session-scoped test client with shared database engine."""
     from sqlalchemy.ext.asyncio import AsyncSession
     from sqlalchemy.orm import sessionmaker
