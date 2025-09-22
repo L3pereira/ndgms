@@ -14,7 +14,7 @@ A comprehensive real-time earthquake monitoring system built with Clean Architec
 - **🌐 Real-time Data Ingestion** - Automated USGS earthquake data collection
 - **🔒 Secure RESTful API** - OAuth2 JWT authentication with role-based access
 - **📡 WebSocket Support** - Live earthquake notifications and updates
-- **🔍 Advanced Filtering** - Search by magnitude, location, time, and source
+- **🔍 Advanced Filtering** - Search by magnitude, location, time, and source with PostGIS spatial queries
 - **📄 Pagination** - Efficient handling of large datasets
 - **⚡ High Performance** - Async/await throughout with connection pooling
 
@@ -24,6 +24,7 @@ A comprehensive real-time earthquake monitoring system built with Clean Architec
 - **🐳 Containerized** - Docker support with multi-stage builds
 - **📊 Monitoring Ready** - Structured logging and health checks
 - **🔧 Developer Experience** - Pre-commit hooks, linting, and type checking
+- **🌍 Geospatial Database** - PostGIS integration for accurate spatial queries and indexing
 
 ## 📋 Table of Contents
 
@@ -76,8 +77,8 @@ docker-compose up --build
 ## 🛠️ Installation
 
 ### **System Requirements**
-- Python 3.11+
-- PostgreSQL 13+
+- Python 3.12+
+- PostgreSQL 15+ with PostGIS 3.3+ extension
 - Docker & Docker Compose (optional)
 - Redis (optional, for caching)
 
@@ -179,7 +180,7 @@ GET /api/v1/earthquakes?min_magnitude=5.0&max_magnitude=7.0
 # Filter by time range
 GET /api/v1/earthquakes?start_time=2024-01-01T00:00:00Z&end_time=2024-01-31T23:59:59Z
 
-# Geographic filtering (within 100km of coordinates)
+# Geographic filtering using PostGIS (accurate distance within 100km)
 GET /api/v1/earthquakes?latitude=34.0522&longitude=-118.2437&radius_km=100
 
 # Pagination
@@ -266,7 +267,7 @@ The system uses PostgreSQL with the following optimizations:
 - **Connection Pooling**: SQLAlchemy async connection pool
 - **Migrations**: Alembic for database versioning
 - **Indexing**: Optimized indexes for query performance
-- **Future**: PostGIS support for geospatial queries
+- **PostGIS Integration**: Full spatial database capabilities with ST_DWithin, ST_Distance, and geometry indexing
 
 ## 🛠️ Development
 
@@ -309,7 +310,7 @@ make format
 # Create new migration
 alembic revision --autogenerate -m "Add new feature"
 
-# Apply migrations
+# Apply migrations (includes PostGIS setup)
 alembic upgrade head
 
 # Rollback migration

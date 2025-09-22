@@ -27,7 +27,7 @@ Real-time earthquake monitoring with USGS data integration.
 - **⚡ Features**:
   - Real-time USGS data ingestion
   - WebSocket live updates
-  - Advanced filtering (magnitude, location, time)
+  - Advanced filtering with PostGIS spatial queries
   - OAuth2 secure API
   - Clean Architecture implementation
 
@@ -119,7 +119,7 @@ graph TB
 
 | Component | Technology | Purpose |
 |-----------|------------|---------|
-| **Backend Services** | FastAPI + Python 3.11+ | High-performance async APIs |
+| **Backend Services** | FastAPI + Python 3.12+ | High-performance async APIs |
 | **Database** | PostgreSQL + PostGIS | Geospatial data storage |
 | **Caching** | Redis | High-speed data caching |
 | **Message Queue** | RabbitMQ / Apache Kafka | Event-driven communication |
@@ -156,8 +156,8 @@ sequenceDiagram
 
 ### **Prerequisites**
 - Docker & Docker Compose
-- Python 3.11+ (for local development)
-- PostgreSQL 13+ (or use Docker)
+- Python 3.12+ (for local development)
+- PostgreSQL 15+ (or use Docker)
 - Redis (or use Docker)
 
 ### **1. Clone the Repository**
