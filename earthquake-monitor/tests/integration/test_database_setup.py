@@ -110,19 +110,32 @@ class DatabaseTestManager:
     def run_migrations(self):
         """Run Alembic migrations on test database."""
         import subprocess
+        from pathlib import Path
 
         # Set environment variable for test database
         env = os.environ.copy()
         env["DATABASE_URL"] = self.test_db_url
 
         try:
+            # Find alembic in the virtual environment
+            # Get the directory containing this script and find the virtual environment
+            current_dir = Path(__file__).parent.parent.parent  # Go up to project root
+            venv_alembic = current_dir / ".venv" / "bin" / "alembic"
+
+            # Try virtual environment first, fallback to system alembic if not found
+            if venv_alembic.exists():
+                alembic_cmd = str(venv_alembic)
+            else:
+                # Try to find alembic using sys.executable path
+                alembic_cmd = "alembic"
+
             # Run migrations using the main alembic configuration
             result = subprocess.run(
-                ["alembic", "upgrade", "head"],
+                [alembic_cmd, "upgrade", "head"],
                 env=env,
                 capture_output=True,
                 text=True,
-                cwd=".",
+                cwd=str(current_dir),
             )
 
             if result.returncode != 0:
