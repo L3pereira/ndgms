@@ -32,12 +32,18 @@ class PostgreSQLEarthquakeRepository(EarthquakeRepository):
             if existing:
                 return str(existing.id)
 
-        # Create new earthquake model
+        # Create new earthquake model with PostGIS geometry
         earthquake_model = EarthquakeModel(
             id=earthquake.id,
             latitude=earthquake.location.latitude,
             longitude=earthquake.location.longitude,
             depth=earthquake.location.depth,
+            location=func.ST_SetSRID(
+                func.ST_MakePoint(
+                    earthquake.location.longitude, earthquake.location.latitude
+                ),
+                4326,
+            ),
             magnitude_value=earthquake.magnitude.value,
             magnitude_scale=earthquake.magnitude.scale.value,
             occurred_at=earthquake.occurred_at,
@@ -123,26 +129,23 @@ class PostgreSQLEarthquakeRepository(EarthquakeRepository):
     async def find_by_location_radius(
         self, latitude: float, longitude: float, radius_km: float
     ) -> list[Earthquake]:
-        """Find earthquakes within a radius of a location (simple distance calculation)."""
-        # Using simple bounding box calculation for now
-        # In a real PostGIS implementation, we'd use ST_DWithin
-        lat_range = radius_km / 111.0  # Approximate degrees per km
-        lng_range = (
-            radius_km / (111.0 * abs(latitude) / 90.0)
-            if latitude != 0
-            else radius_km / 111.0
-        )
+        """Find earthquakes within a radius of a location using PostGIS ST_DWithin."""
+        # Create a point geometry for the search location
+        search_point = func.ST_SetSRID(func.ST_MakePoint(longitude, latitude), 4326)
+
+        # Use ST_DWithin with geography cast for accurate distance in meters
+        # Convert radius from km to meters
+        radius_meters = radius_km * 1000
 
         result = await self.session.execute(
             select(EarthquakeModel)
             .where(
-                and_(
-                    EarthquakeModel.latitude.between(
-                        latitude - lat_range, latitude + lat_range
-                    ),
-                    EarthquakeModel.longitude.between(
-                        longitude - lng_range, longitude + lng_range
-                    ),
+                func.ST_DWithin(
+                    func.ST_Transform(
+                        EarthquakeModel.location, 3857
+                    ),  # Transform to Web Mercator for accurate distance
+                    func.ST_Transform(search_point, 3857),
+                    radius_meters,
                 )
             )
             .order_by(EarthquakeModel.occurred_at.desc())
@@ -196,27 +199,22 @@ class PostgreSQLEarthquakeRepository(EarthquakeRepository):
             if filters.get("source"):
                 conditions.append(EarthquakeModel.source == filters["source"])
 
-            # Location radius filter
+            # Location radius filter using PostGIS
             if all(key in filters for key in ["latitude", "longitude", "radius_km"]):
                 lat, lng, radius = (
                     filters["latitude"],
                     filters["longitude"],
                     filters["radius_km"],
                 )
-                lat_range = radius / 111.0
-                lng_range = (
-                    radius / (111.0 * abs(lat) / 90.0) if lat != 0 else radius / 111.0
-                )
+                search_point = func.ST_SetSRID(func.ST_MakePoint(lng, lat), 4326)
+                radius_meters = radius * 1000
 
-                conditions.extend(
-                    [
-                        EarthquakeModel.latitude.between(
-                            lat - lat_range, lat + lat_range
-                        ),
-                        EarthquakeModel.longitude.between(
-                            lng - lng_range, lng + lng_range
-                        ),
-                    ]
+                conditions.append(
+                    func.ST_DWithin(
+                        func.ST_Transform(EarthquakeModel.location, 3857),
+                        func.ST_Transform(search_point, 3857),
+                        radius_meters,
+                    )
                 )
 
             if conditions:
@@ -265,27 +263,22 @@ class PostgreSQLEarthquakeRepository(EarthquakeRepository):
             if filters.get("source"):
                 conditions.append(EarthquakeModel.source == filters["source"])
 
-            # Location radius filter
+            # Location radius filter using PostGIS
             if all(key in filters for key in ["latitude", "longitude", "radius_km"]):
                 lat, lng, radius = (
                     filters["latitude"],
                     filters["longitude"],
                     filters["radius_km"],
                 )
-                lat_range = radius / 111.0
-                lng_range = (
-                    radius / (111.0 * abs(lat) / 90.0) if lat != 0 else radius / 111.0
-                )
+                search_point = func.ST_SetSRID(func.ST_MakePoint(lng, lat), 4326)
+                radius_meters = radius * 1000
 
-                conditions.extend(
-                    [
-                        EarthquakeModel.latitude.between(
-                            lat - lat_range, lat + lat_range
-                        ),
-                        EarthquakeModel.longitude.between(
-                            lng - lng_range, lng + lng_range
-                        ),
-                    ]
+                conditions.append(
+                    func.ST_DWithin(
+                        func.ST_Transform(EarthquakeModel.location, 3857),
+                        func.ST_Transform(search_point, 3857),
+                        radius_meters,
+                    )
                 )
 
             if conditions:
@@ -320,3 +313,30 @@ class PostgreSQLEarthquakeRepository(EarthquakeRepository):
             earthquake.raw_data = model.raw_data
 
         return earthquake
+
+    async def find_nearest_earthquakes(
+        self, latitude: float, longitude: float, limit: int = 10
+    ) -> list[tuple[Earthquake, float]]:
+        """Find nearest earthquakes with distances using PostGIS."""
+        search_point = func.ST_SetSRID(func.ST_MakePoint(longitude, latitude), 4326)
+
+        # Calculate distance in kilometers using geography
+        distance_km = (
+            func.ST_Distance(
+                func.ST_Geography(EarthquakeModel.location),
+                func.ST_Geography(search_point),
+            )
+            / 1000.0
+        )
+
+        result = await self.session.execute(
+            select(EarthquakeModel, distance_km.label("distance_km"))
+            .order_by(distance_km)
+            .limit(limit)
+        )
+
+        rows = result.all()
+        return [
+            (self._model_to_entity(row.EarthquakeModel), float(row.distance_km))
+            for row in rows
+        ]

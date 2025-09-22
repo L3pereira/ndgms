@@ -3,6 +3,7 @@
 import uuid
 from datetime import UTC, datetime
 
+from geoalchemy2 import Geometry
 from sqlalchemy import Boolean, Column, DateTime, Float, String, Text
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import declarative_base
@@ -21,6 +22,9 @@ class EarthquakeModel(Base):
     latitude = Column(Float, nullable=False, index=True)
     longitude = Column(Float, nullable=False, index=True)
     depth = Column(Float, nullable=False)
+
+    # PostGIS geometry column (POINT with SRID 4326 for WGS84)
+    location = Column(Geometry("POINT", srid=4326), index=True)
 
     # Magnitude data
     magnitude_value = Column(Float, nullable=False, index=True)
