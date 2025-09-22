@@ -3,6 +3,7 @@
 import os
 
 import pytest
+import pytest_asyncio
 from fastapi.testclient import TestClient
 from httpx import ASGITransport, AsyncClient
 
@@ -38,7 +39,7 @@ def client():
     return TestClient(app)
 
 
-@pytest.fixture
+@pytest_asyncio.fixture
 async def client_with_db(test_db_manager):  # noqa: F811
     """Create an async test client for the FastAPI app with real database."""
     # Set environment to use test database

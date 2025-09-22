@@ -1,11 +1,11 @@
 """Database setup utilities for integration tests."""
 
-import asyncio
 import os
 from collections.abc import AsyncGenerator
 from datetime import UTC
 
 import pytest
+import pytest_asyncio
 from sqlalchemy import create_engine, text
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -118,16 +118,7 @@ def test_db_manager():
     manager.drop_test_database()
 
 
-@pytest.fixture(scope="session")
-def event_loop():
-    """Create an instance of the default event loop for the test session."""
-    loop = asyncio.new_event_loop()
-    asyncio.set_event_loop(loop)
-    yield loop
-    loop.close()
-
-
-@pytest.fixture
+@pytest_asyncio.fixture(scope="function")
 async def db_session(test_db_manager) -> AsyncGenerator[AsyncSession, None]:
     """Create a database session for testing."""
     # Set environment to use test database
@@ -146,14 +137,23 @@ async def db_session(test_db_manager) -> AsyncGenerator[AsyncSession, None]:
         test_engine, class_=AsyncSessionClass, expire_on_commit=False
     )
 
-    async with TestSessionLocal() as session:
+    # Create session and yield it directly
+    session = TestSessionLocal()
+    try:
         yield session
-        await session.rollback()  # Rollback any changes after each test
+    finally:
+        # Clean up: close session and dispose engine
+        try:
+            await session.close()
+        except Exception:
+            pass
+        try:
+            await test_engine.dispose()
+        except Exception:
+            pass
 
-    await test_engine.dispose()
 
-
-@pytest.fixture
+@pytest_asyncio.fixture
 async def seed_test_data(db_session):
     """Seed the test database with initial data."""
     import uuid
