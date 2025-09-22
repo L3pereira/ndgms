@@ -4,9 +4,12 @@ from typing import Annotated
 
 from authx import TokenPayload
 from fastapi import Depends, HTTPException, Request, status
+from sqlalchemy.orm import Session
+
+from src.infrastructure.database.config import get_session
 
 from .models import User
-from .repository import UserRepository, get_user_repository
+from .repository import get_user_repository
 from .security import SecurityService, get_security_service
 
 
@@ -28,9 +31,10 @@ def get_optional_current_user_payload() -> TokenPayload | None:
 
 def get_current_user(
     payload: Annotated[TokenPayload, Depends(get_current_user_payload)],
-    user_repo: Annotated[UserRepository, Depends(get_user_repository)],
+    session: Annotated[Session, Depends(get_session)],
 ) -> User:
     """Get the current authenticated user."""
+    user_repo = get_user_repository(session)
     user = user_repo.get_user_by_id(payload.sub)
     if not user or not user.is_active:
         raise HTTPException(
@@ -42,12 +46,13 @@ def get_current_user(
 
 def get_optional_current_user(
     payload: Annotated[TokenPayload | None, Depends(get_optional_current_user_payload)],
-    user_repo: Annotated[UserRepository, Depends(get_user_repository)],
+    session: Annotated[Session, Depends(get_session)],
 ) -> User | None:
     """Get the current user if authenticated, None otherwise."""
     if payload is None:
         return None
 
+    user_repo = get_user_repository(session)
     user = user_repo.get_user_by_id(payload.sub)
     if not user or not user.is_active:
         return None

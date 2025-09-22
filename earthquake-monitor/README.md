@@ -157,18 +157,41 @@ curl -X GET "http://localhost:8000/api/v1/earthquakes" \
   -H "Authorization: Bearer YOUR_ACCESS_TOKEN"
 ```
 
-### **Core Endpoints**
+### **Complete API Reference**
 
+#### **🔐 Authentication Endpoints** (`/api/v1/auth`)
+| Method | Endpoint | Description | Auth Required |
+|--------|----------|-------------|---------------|
+| `POST` | `/register` | Register new user account | ❌ |
+| `POST` | `/login` | User authentication (returns JWT tokens) | ❌ |
+| `POST` | `/refresh` | Refresh access token using refresh token | ❌ |
+| `GET` | `/me` | Get current authenticated user info | ✅ |
+| `POST` | `/logout` | Logout current user | ✅ |
+| `GET` | `/verify` | Verify if current token is valid | ✅ |
+
+#### **🌍 Earthquake Data Endpoints** (`/api/v1/earthquakes`)
+| Method | Endpoint | Description | Auth Required |
+|--------|----------|-------------|---------------|
+| `GET` | `/` | List earthquakes with advanced filtering & pagination | ✅ |
+| `GET` | `/{earthquake_id}` | Get detailed earthquake information | ✅ |
+| `POST` | `/` | Create earthquake record manually | ✅ |
+
+#### **📥 Data Ingestion Endpoints** (`/api/v1/ingestion`)
+| Method | Endpoint | Description | Auth Required |
+|--------|----------|-------------|---------------|
+| `POST` | `/trigger` | Manually trigger USGS data ingestion | ✅ |
+| `GET` | `/sources` | Get available data sources (USGS feeds info) | ✅ |
+| `GET` | `/status` | Get current ingestion system status | ✅ |
+
+#### **📡 Real-time Communication**
+| Method | Endpoint | Description | Auth Required |
+|--------|----------|-------------|---------------|
+| `WS` | `/api/v1/ws` | WebSocket endpoint for real-time updates | ✅ |
+
+#### **🏥 System Health**
 | Method | Endpoint | Description | Auth Required |
 |--------|----------|-------------|---------------|
 | `GET` | `/health` | System health check | ❌ |
-| `POST` | `/api/v1/auth/register` | Register new user | ❌ |
-| `POST` | `/api/v1/auth/login` | User authentication | ❌ |
-| `GET` | `/api/v1/earthquakes` | List earthquakes with filters | ✅ |
-| `GET` | `/api/v1/earthquakes/{id}` | Get earthquake details | ✅ |
-| `POST` | `/api/v1/earthquakes` | Create earthquake record | ✅ |
-| `POST` | `/api/v1/ingestion/trigger` | Trigger USGS data ingestion | ✅ |
-| `WS` | `/api/v1/ws` | WebSocket real-time updates | ✅ |
 
 ### **Filtering Examples**
 
@@ -191,7 +214,165 @@ GET /api/v1/earthquakes?min_magnitude=6.0&source=USGS&limit=10
 
 ## 🏗️ Architecture
 
-### **Clean Architecture Overview**
+### **System Architecture**
+
+```mermaid
+graph TB
+    %% External Systems
+    USGS["🌍 USGS API<br/>GeoJSON Feeds & FDSNWS"]
+    Client["💻 Frontend Client<br/>Web/Mobile App"]
+
+    %% Presentation Layer
+    subgraph "🌐 Presentation Layer"
+        API["🔌 FastAPI<br/>REST Endpoints"]
+        WS["📡 WebSocket<br/>Real-time Updates"]
+        Auth["🔐 OAuth2/JWT<br/>Authentication"]
+    end
+
+    %% Application Layer
+    subgraph "🔄 Application Layer"
+        UC["⚙️ Use Cases<br/>Business Logic"]
+        Events["📨 Event System<br/>Publisher/Handlers"]
+        DTO["📦 DTOs<br/>Data Transfer"]
+    end
+
+    %% Domain Layer
+    subgraph "🎯 Domain Layer"
+        Entities["🏢 Entities<br/>Earthquake, Location, Magnitude"]
+        DomainEvents["📢 Domain Events<br/>EarthquakeDetected, HighMagnitudeAlert"]
+        Repository["📋 Repository Interfaces<br/>Abstract Data Access"]
+    end
+
+    %% Infrastructure Layer
+    subgraph "🔌 Infrastructure Layer"
+        PostgreSQL["🗄️ PostgreSQL + PostGIS<br/>Spatial Database"]
+        USGSService["🌐 USGS Service<br/>External API Client"]
+        RepoImpl["📊 Repository Implementation<br/>SQL Alchemy"]
+    end
+
+    %% Connections
+    Client -.->|HTTP/WS| API
+    Client -.->|WebSocket| WS
+    API --> Auth
+    API --> DTO
+    DTO --> UC
+    WS --> Events
+    UC --> Entities
+    UC --> Events
+    Events --> DomainEvents
+    Entities --> Repository
+    Repository --> RepoImpl
+    RepoImpl --> PostgreSQL
+    UC --> USGSService
+    USGSService -.->|REST API| USGS
+    Events --> WS
+
+    %% Styling
+    classDef external fill:#e1f5fe,stroke:#01579b,stroke-width:2px
+    classDef presentation fill:#f3e5f5,stroke:#4a148c,stroke-width:2px
+    classDef application fill:#e8f5e8,stroke:#1b5e20,stroke-width:2px
+    classDef domain fill:#fff3e0,stroke:#e65100,stroke-width:2px
+    classDef infrastructure fill:#fce4ec,stroke:#880e4f,stroke-width:2px
+
+    class USGS,Client external
+    class API,WS,Auth presentation
+    class UC,Events,DTO application
+    class Entities,DomainEvents,Repository domain
+    class PostgreSQL,USGSService,RepoImpl infrastructure
+```
+
+### **Data Flow Architecture**
+
+#### **Real-time Data Ingestion Flow**
+
+```mermaid
+sequenceDiagram
+    participant USGS as 🌍 USGS API<br/>earthquake.usgs.gov
+    participant Scheduler as ⏰ Scheduler/Trigger<br/>ingestion.router<br/>Manual/Cron Job
+    participant USGSService as 🔌 USGS Service<br/>USGSService<br/>httpx.AsyncClient
+    participant UseCase as ⚙️ Ingestion Use Case<br/>IngestEarthquakeDataUseCase<br/>ScheduledIngestionUseCase
+    participant Repository as 📊 Repository<br/>EarthquakeRepository<br/>PostgreSQLEarthquakeRepository
+    participant PostgreSQL as 🗄️ PostgreSQL<br/>earthquakes table<br/>PostGIS functions
+    participant Events as 📨 Event Publisher<br/>InMemoryEventPublisher<br/>EarthquakeEventHandlers
+    participant WebSocket as 📡 WebSocket Manager<br/>WebSocketManager<br/>broadcast methods
+    participant Client as 💻 Frontend Client<br/>WebSocket connection<br/>Real-time UI
+
+    Note over USGS,Client: Real-time Earthquake Data Ingestion Flow
+
+    %% Data Ingestion
+    Scheduler->>+USGSService: fetch_recent_earthquakes()
+    USGSService->>+USGS: GET /summary/all_day.geojson
+    USGS-->>-USGSService: GeoJSON earthquake data
+    USGSService-->>-Scheduler: List[Earthquake entities]
+
+    Scheduler->>+UseCase: execute(earthquakes)
+    loop For each earthquake
+        UseCase->>+Repository: save(earthquake)
+        Repository->>+PostgreSQL: INSERT INTO earthquakes
+        PostgreSQL-->>-Repository: earthquake_id
+        Repository-->>-UseCase: earthquake_id
+
+        %% Domain Events
+        UseCase->>+Events: publish(EarthquakeDetected)
+        alt If magnitude >= 5.0
+            UseCase->>Events: publish(HighMagnitudeAlert)
+        end
+
+        Events->>+WebSocket: broadcast_earthquake_update()
+        WebSocket->>Client: Real-time notification
+        WebSocket-->>-Events: sent
+        Events-->>-UseCase: events published
+    end
+    UseCase-->>-Scheduler: IngestionResult
+
+    Note over Client: Client receives real-time earthquake updates via WebSocket
+```
+
+### **REST API Request Flow**
+
+```mermaid
+sequenceDiagram
+    participant Client as 💻 Frontend Client<br/>React/Vue/Mobile App
+    participant API as 🔌 FastAPI<br/>earthquakes.router<br/>auth.router
+    participant Auth as 🔐 Auth Service<br/>SecurityService<br/>UserRepository
+    participant DTO as 📦 DTO Layer<br/>EarthquakeFilters<br/>PaginationParams
+    participant UseCase as ⚙️ Use Case<br/>GetEarthquakesUseCase<br/>GetEarthquakeDetailsUseCase
+    participant Repository as 📊 Repository<br/>EarthquakeRepository<br/>PostgreSQLEarthquakeRepository
+    participant PostgreSQL as 🗄️ PostgreSQL<br/>earthquakes table<br/>users table
+
+    Note over Client,PostgreSQL: Typical REST API Request Flow
+
+    %% Authentication
+    Client->>+API: POST /api/v1/auth/login
+    API->>+Auth: validate_credentials()
+    Auth->>+Repository: find_user_by_email()
+    Repository->>+PostgreSQL: SELECT * FROM users
+    PostgreSQL-->>-Repository: user_data
+    Repository-->>-Auth: User entity
+    Auth-->>-API: JWT tokens
+    API-->>-Client: {access_token, refresh_token}
+
+    %% REST API Request
+    Client->>+API: GET /api/v1/earthquakes?magnitude=5.0
+    API->>+Auth: verify_token()
+    Auth-->>-API: token_valid
+
+    API->>+DTO: create_filter_dto(request)
+    DTO-->>-API: EarthquakeFilters
+
+    API->>+UseCase: get_earthquakes(filters, pagination)
+    UseCase->>+Repository: find_with_filters()
+    Repository->>+PostgreSQL: SELECT * FROM earthquakes WHERE...
+    PostgreSQL-->>-Repository: earthquake_records
+    Repository-->>-UseCase: List[Earthquake entities]
+    UseCase-->>-API: PaginatedResult
+
+    API-->>-Client: {earthquakes: [...], pagination: {...}}
+
+    Note over Client: Client receives filtered earthquake data via REST API
+```
+
+### **Clean Architecture Layers**
 
 ```
 📦 earthquake-monitor/
@@ -224,10 +405,126 @@ GET /api/v1/earthquakes?min_magnitude=6.0&source=USGS&limit=10
 - **⚙️ Services**: Domain services for complex business operations
 - **📨 Events**: Domain events for decoupled communication
 
+### **Business Logic Separation** (Interview Showcase)
+
+This project demonstrates **proper separation of business logic** across Clean Architecture layers, showing different types of business rules:
+
+#### **🎯 Domain Layer Business Logic** (Core Business Rules)
+**What earthquakes ARE** - Universal truths independent of any application
+
+```python
+# src/domain/entities/magnitude.py
+class Magnitude:
+    def is_significant(self) -> bool:
+        """Seismological fact: magnitude ≥5.0 is significant."""
+        return self.value >= 5.0
+
+    def get_alert_level(self) -> str:
+        """Scientific classification - universal truth."""
+        if self.value >= 7.0: return "CRITICAL"     # Great earthquakes
+        elif self.value >= 5.5: return "HIGH"       # Major earthquakes
+        elif self.value >= 4.0: return "MEDIUM"     # Light earthquakes
+        return "LOW"                                # Micro earthquakes
+
+# src/domain/entities/earthquake.py
+class Earthquake:
+    def requires_immediate_alert(self) -> bool:
+        """Core business rule: significant earthquakes near populated areas need alerts."""
+        return (
+            self.magnitude.is_significant() and
+            self.location.is_near_populated_area()
+        )
+
+    def calculate_affected_radius_km(self) -> float:
+        """Physics-based calculation - always true regardless of application."""
+        base_radius = self.magnitude.value * 20  # Seismological formula
+        depth_factor = max(0.1, 1 - (self.location.depth / 100))  # Depth impact
+        return base_radius * depth_factor
+```
+
+#### **🔄 Application Layer Business Logic** (Workflow Orchestration)
+**What to DO with earthquakes** - Application-specific processes and coordination
+
+```python
+# src/application/use_cases/ingest_earthquake_data.py
+class IngestEarthquakeDataUseCase:
+    async def execute(self, earthquakes: list[Earthquake]) -> IngestionResult:
+        """Application workflow: how to process earthquake data in THIS system."""
+        new_earthquakes = 0
+
+        for earthquake in earthquakes:
+            # Application logic: duplicate prevention (system-specific)
+            existing = await self.repository.find_by_id(earthquake.id)
+            if existing:
+                continue  # Skip duplicates - application policy
+
+            # Application workflow: persist earthquake
+            earthquake_id = await self.repository.save(earthquake)
+            new_earthquakes += 1
+
+            # Application coordination: publish events based on domain rules
+            await self._publish_events(earthquake)
+
+        return IngestionResult(new_earthquakes=new_earthquakes)
+
+    async def _publish_events(self, earthquake: Earthquake) -> None:
+        """Application workflow: when and how to publish events."""
+        # Always publish earthquake detected (application policy)
+        earthquake_detected = EarthquakeDetected(...)
+        await self.event_publisher.publish(earthquake_detected)
+
+        # Use domain logic to decide, but publishing is application concern
+        if earthquake.magnitude.is_significant():  # Domain rule
+            high_magnitude_alert = HighMagnitudeAlert(...)
+            await self.event_publisher.publish(high_magnitude_alert)  # App workflow
+
+# src/application/use_cases/get_earthquakes.py
+class GetEarthquakesUseCase:
+    async def execute(self, filters: EarthquakeFilters, pagination: PaginationParams):
+        """Application logic: how to retrieve and present earthquake data."""
+        # Application workflow: coordinate filtering with repository
+        earthquakes = await self.repository.find_with_filters(
+            filters, pagination.offset, pagination.limit
+        )
+
+        # Application logic: calculate pagination metadata
+        total = await self.repository.count_with_filters(filters)
+
+        return PaginatedResult(
+            items=earthquakes,
+            total=total,
+            page=pagination.page,
+            size=pagination.size,
+            pages=(total + pagination.size - 1) // pagination.size  # App calculation
+        )
+```
+
+#### **📊 Comparison Table**
+
+| **Domain Logic** | **Application Logic** |
+|------------------|----------------------|
+| `magnitude.is_significant()` | "When to publish events" |
+| `earthquake.requires_immediate_alert()` | "How to handle duplicates" |
+| `calculate_affected_radius_km()` | "Pagination and filtering workflows" |
+| **Pure business rules** | **Coordination and orchestration** |
+| **Technology-independent** | **Uses repositories, events, external services** |
+| **Always true (physics/science)** | **Application-specific policies** |
+| **What earthquakes ARE** | **What to DO with earthquakes** |
+
+#### **🎭 Real-world Interview Analogy**
+- **Domain Logic** = **Doctor's Medical Knowledge**: "Blood pressure > 140/90 is hypertension" (always true)
+- **Application Logic** = **Hospital Workflow**: "Send SMS alerts to emergency contacts for critical patients" (hospital-specific process)
+
+This separation ensures:
+- **Domain rules** can be tested in isolation
+- **Business logic** is technology-independent
+- **Application workflows** can change without affecting core business rules
+- **Clean boundaries** between what the business does vs. how the system does it
+
 ### **Key Design Patterns**
 
 - **🔄 Repository Pattern**: Abstract data access
-- **🎯 Use Case Pattern**: Application-specific business rules
+- **🎯 Use Case Pattern**: Application-specific business workflows
 - **🏭 Factory Pattern**: Object creation abstraction
 - **📢 Observer Pattern**: Event-driven architecture
 - **🛡️ Dependency Injection**: Loose coupling between layers
@@ -247,9 +544,11 @@ JWT_SECRET_KEY=your-super-secret-jwt-key
 JWT_ALGORITHM=HS256
 JWT_ACCESS_TOKEN_EXPIRE_MINUTES=30
 
-# External APIs
-USGS_BASE_URL=https://earthquake.usgs.gov/fdsnws/event/1
-USGS_API_RATE_LIMIT=100
+# USGS API Configuration
+USGS_API_BASE_URL=https://earthquake.usgs.gov/fdsnws/event/1
+USGS_GEOJSON_BASE_URL=https://earthquake.usgs.gov/earthquakes/feed/v1.0/summary
+USGS_API_TIMEOUT=30
+USGS_POLLING_INTERVAL=300
 
 # Security
 ALLOWED_ORIGINS=http://localhost:3000,https://app.ndgms.org
@@ -319,15 +618,153 @@ alembic downgrade -1
 alembic current
 ```
 
-### **Data Ingestion**
+### **🌍 USGS Data Integration**
 
+The system integrates with USGS (United States Geological Survey) earthquake data through two complementary methods:
+
+#### **1. GeoJSON Feed Service** (Primary - Real-time)
+- **Endpoint**: `https://earthquake.usgs.gov/earthquakes/feed/v1.0/summary/{magnitude}_{period}.geojson`
+- **Usage**: Real-time monitoring with scheduled ingestion
+- **Data**: Pre-built feeds with different magnitude thresholds and time periods
+- **Examples**:
+  - `all_day.geojson` - All earthquakes in the past 24 hours
+  - `4.5_week.geojson` - Magnitude 4.5+ earthquakes in the past week
+  - `significant_month.geojson` - Significant earthquakes in the past month
+
+#### **2. FDSNWS Query API** (Historical Data)
+- **Endpoint**: `https://earthquake.usgs.gov/fdsnws/event/1/query`
+- **Usage**: Flexible historical data retrieval and bulk imports
+- **Features**: Custom date ranges, precise magnitude filtering, multiple output formats
+- **Parameters**: `starttime`, `endtime`, `minmagnitude`, `format=geojson`
+
+#### **Data Processing Pipeline**
+```mermaid
+flowchart LR
+    A[🌍 USGS API] --> B[🔌 USGS Service]
+    B --> C[📊 Data Validation]
+    C --> D[🏢 Domain Entities]
+    D --> E[📥 Repository Layer]
+    E --> F[🗄️ PostgreSQL + PostGIS]
+    D --> G[📨 Domain Events]
+    G --> H[📡 WebSocket Broadcast]
+    H --> I[💻 Real-time Clients]
+```
+
+### **🚨 High-Magnitude Alert System**
+
+The system implements an intelligent alert system based on earthquake significance:
+
+#### **Magnitude Classification**
+- **Significant Earthquakes**: Magnitude ≥ 5.0
+- **Alert Levels**:
+  - 🟢 **LOW**: < 4.0 (Minor impact)
+  - 🟡 **MEDIUM**: 4.0 - 5.4 (Moderate impact)
+  - 🟠 **HIGH**: 5.5 - 6.9 (Major impact)
+  - 🔴 **CRITICAL**: ≥ 7.0 (Extreme impact)
+
+#### **Alert Triggers**
+- **High-Magnitude Alert**: Automatically triggered for earthquakes ≥ 5.0
+- **Immediate Response Required**: Earthquakes ≥ 5.0 near populated areas
+- **Impact Radius**: Calculated as `magnitude × 20km × depth_factor`
+
+#### **Real-time Notifications**
+```json
+{
+  "type": "high_magnitude_alert",
+  "data": {
+    "earthquake_id": "us6000abcd",
+    "magnitude": 7.2,
+    "alert_level": "CRITICAL",
+    "affected_radius_km": 144.0,
+    "requires_immediate_response": true,
+    "latitude": 35.5,
+    "longitude": -120.5
+  }
+}
+```
+
+### **📡 WebSocket Real-time Features**
+
+#### **Connection & Authentication**
+- **Endpoint**: `ws://localhost:8000/api/v1/ws`
+- **Authentication**: JWT token required for connection
+- **Auto-reconnection**: Client-side reconnection handling recommended
+
+#### **Subscription Types**
+```json
+// Subscribe to all new earthquake notifications
+{"action": "subscribe_earthquakes"}
+
+// Subscribe to high-magnitude alerts only (≥5.0)
+{"action": "subscribe_alerts"}
+```
+
+#### **Real-time Message Types**
+
+**1. Earthquake Detection** (All new earthquakes)
+```json
+{
+  "type": "earthquake_detected",
+  "data": {
+    "id": "us6000abcd",
+    "magnitude": 4.2,
+    "latitude": 35.5,
+    "longitude": -120.5,
+    "depth": 10.5,
+    "occurred_at": "2024-01-15T14:30:00Z",
+    "source": "USGS",
+    "timestamp": "2024-01-15T14:32:15Z"
+  }
+}
+```
+
+**2. High-Magnitude Alert** (Significant earthquakes ≥5.0)
+```json
+{
+  "type": "high_magnitude_alert",
+  "data": {
+    "earthquake_id": "us6000abcd",
+    "magnitude": 6.8,
+    "alert_level": "HIGH",
+    "affected_radius_km": 95.2,
+    "requires_immediate_response": true,
+    "timestamp": "2024-01-15T14:32:15Z"
+  }
+}
+```
+
+**Note**: Currently, WebSocket subscriptions do not support severity filtering. Clients receive all events for their subscription type and should filter client-side based on alert levels.
+
+#### **Manual Data Ingestion**
 ```bash
-# Manual USGS data ingestion
+# Using the standalone script (FDSNWS API)
 python scripts/ingestion/usgs_ingestion.py
 
-# Scheduled ingestion (in production)
-python scripts/ingestion/usgs_ingestion.py --schedule daily
+# Using the API endpoint (GeoJSON feeds)
+curl -X POST "http://localhost:8000/api/v1/ingestion/trigger" \
+  -H "Authorization: Bearer YOUR_TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "source": "USGS",
+    "period": "day",
+    "magnitude_filter": "2.5",
+    "limit": 100
+  }'
 ```
+
+#### **Ingestion Configuration**
+```bash
+# Environment variables for USGS integration
+USGS_API_BASE_URL=https://earthquake.usgs.gov/fdsnws/event/1
+USGS_GEOJSON_BASE_URL=https://earthquake.usgs.gov/earthquakes/feed/v1.0/summary
+USGS_API_TIMEOUT=30
+USGS_POLLING_INTERVAL=300
+```
+
+#### **Available USGS Feed Options**
+- **Time Periods**: `hour`, `day`, `week`, `month`
+- **Magnitude Filters**: `all`, `significant`, `4.5`, `2.5`, `1.0`
+- **Data Sources**: Real-time GeoJSON feeds updated every 5 minutes
 
 ## 🧪 Testing
 

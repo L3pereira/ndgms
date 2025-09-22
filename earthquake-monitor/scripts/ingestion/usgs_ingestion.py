@@ -6,6 +6,7 @@ This script fetches earthquake data from the USGS API and ingests it into the sy
 """
 
 import asyncio
+import os
 from datetime import UTC, datetime, timedelta
 from typing import Any
 
@@ -19,8 +20,10 @@ from src.presentation.dependencies import get_earthquake_repository
 class USGSClient:
     """Client for fetching earthquake data from USGS API."""
 
-    def __init__(self, base_url: str = "https://earthquake.usgs.gov/fdsnws/event/1"):
-        self.base_url = base_url
+    def __init__(self, base_url: str | None = None):
+        self.base_url = base_url or os.getenv(
+            "USGS_API_BASE_URL", "https://earthquake.usgs.gov/fdsnws/event/1"
+        )
 
     async def fetch_earthquakes(
         self,

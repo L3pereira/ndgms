@@ -2,12 +2,14 @@
 
 from datetime import UTC
 
+import pytest
 from httpx import AsyncClient
 
 
 class TestEarthquakeAPIWithDatabase:
     """Test earthquake API endpoints with real PostgreSQL database."""
 
+    @pytest.mark.asyncio
     async def test_create_earthquake_in_database(
         self, client_with_db: AsyncClient, sample_earthquake_data: dict
     ):
@@ -36,6 +38,7 @@ class TestEarthquakeAPIWithDatabase:
             == sample_earthquake_data["latitude"]
         )
 
+    @pytest.mark.asyncio
     async def test_earthquake_persistence_across_requests(
         self, client_with_db: AsyncClient, sample_earthquake_data: dict
     ):
@@ -82,6 +85,7 @@ class TestEarthquakeAPIWithDatabase:
         assert earthquake_id1 in earthquake_ids
         assert earthquake_id2 in earthquake_ids
 
+    @pytest.mark.asyncio
     async def test_earthquake_filtering_with_database(
         self, client_with_db: AsyncClient, seed_test_data
     ):
@@ -104,6 +108,7 @@ class TestEarthquakeAPIWithDatabase:
         for earthquake in earthquakes:
             assert earthquake["source"] == "TEST"
 
+    @pytest.mark.asyncio
     async def test_database_transaction_rollback(
         self, db_session, sample_earthquake_data: dict
     ):
@@ -150,6 +155,7 @@ class TestEarthquakeAPIWithDatabase:
 
         # Session should rollback after test, so earthquake won't persist
 
+    @pytest.mark.asyncio
     async def test_data_ingestion_with_database(self, client_with_db: AsyncClient):
         """Test data ingestion endpoint (may fail if external service unavailable)."""
         # Test ingestion endpoint

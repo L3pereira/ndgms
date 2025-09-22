@@ -41,7 +41,8 @@ def create_async_engine(database_url: str, **kwargs):
 
 # Database URL from environment variables
 DATABASE_URL = os.getenv(
-    "DATABASE_URL", "postgresql://postgres:password@localhost:5432/earthquake_monitor"
+    "DATABASE_URL",
+    "postgresql://postgres:password@localhost:5432/earthquake_monitor_dev",
 )
 
 # For async operations

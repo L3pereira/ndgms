@@ -3,119 +3,152 @@
 import uuid
 from datetime import UTC, datetime
 
+from sqlalchemy.orm import Session
+
+from src.infrastructure.database.models import UserModel
+
 from .models import User, UserCreate
 from .security import get_security_service
 
 
 class UserRepository:
-    """In-memory user repository for demonstration purposes."""
+    """PostgreSQL-based user repository."""
 
-    def __init__(self):
-        self._users: dict[str, User] = {}
-        self._users_by_email: dict[str, str] = {}  # email -> user_id mapping
+    def __init__(self, session: Session):
+        self.session = session
         self._security = get_security_service()
 
-        # Create a default admin user for testing
-        self._create_default_users()
-
-    def _create_default_users(self):
-        """Create default users for testing."""
-        admin_user = UserCreate(
-            email="admin@earthquake-monitor.com",
-            username="admin",
-            full_name="System Administrator",
-            password="admin123!@#",
-            is_active=True,
+    def _user_model_to_domain(self, user_model: UserModel) -> User:
+        """Convert UserModel to domain User."""
+        return User(
+            id=str(user_model.id),
+            email=user_model.email,
+            username=user_model.username,
+            full_name=user_model.full_name,
+            hashed_password=user_model.hashed_password,
+            is_active=user_model.is_active,
+            created_at=user_model.created_at,
+            last_login=user_model.last_login,
         )
-        self.create_user(admin_user)
-
-        test_user = UserCreate(
-            email="test@earthquake-monitor.com",
-            username="testuser",
-            full_name="Test User",
-            password="testpass123",
-            is_active=True,
-        )
-        self.create_user(test_user)
 
     def create_user(self, user_data: UserCreate) -> User:
         """Create a new user."""
-        if user_data.email in self._users_by_email:
-            raise ValueError("User with this email already exists")
+        # Check if user already exists
+        existing_user = (
+            self.session.query(UserModel)
+            .filter(
+                (UserModel.email == user_data.email)
+                | (UserModel.username == user_data.username)
+            )
+            .first()
+        )
 
-        user_id = str(uuid.uuid4())
+        if existing_user:
+            if existing_user.email == user_data.email:
+                raise ValueError("User with this email already exists")
+            else:
+                raise ValueError("User with this username already exists")
+
+        # Hash password
         hashed_password = self._security.hash_password(user_data.password)
 
-        user = User(
-            id=user_id,
+        # Create user model
+        user_model = UserModel(
             email=user_data.email,
             username=user_data.username,
             full_name=user_data.full_name,
-            is_active=user_data.is_active,
             hashed_password=hashed_password,
+            is_active=user_data.is_active,
             created_at=datetime.now(UTC),
             last_login=None,
         )
 
-        self._users[user_id] = user
-        self._users_by_email[user_data.email] = user_id
+        self.session.add(user_model)
+        self.session.commit()
+        self.session.refresh(user_model)
 
-        return user
+        return self._user_model_to_domain(user_model)
 
     def get_user_by_id(self, user_id: str) -> User | None:
         """Get a user by ID."""
-        return self._users.get(user_id)
+        user_model = (
+            self.session.query(UserModel)
+            .filter(UserModel.id == uuid.UUID(user_id))
+            .first()
+        )
+
+        if user_model:
+            return self._user_model_to_domain(user_model)
+        return None
 
     def get_user_by_email(self, email: str) -> User | None:
         """Get a user by email."""
-        user_id = self._users_by_email.get(email)
-        if user_id:
-            return self._users.get(user_id)
+        user_model = (
+            self.session.query(UserModel).filter(UserModel.email == email).first()
+        )
+
+        if user_model:
+            return self._user_model_to_domain(user_model)
         return None
 
     def authenticate_user(self, email: str, password: str) -> User | None:
         """Authenticate a user by email and password."""
-        user = self.get_user_by_email(email)
-        if not user or not user.is_active:
+        user_model = (
+            self.session.query(UserModel).filter(UserModel.email == email).first()
+        )
+
+        if not user_model or not user_model.is_active:
             return None
 
-        if self._security.verify_password(password, user.hashed_password):
+        if self._security.verify_password(password, user_model.hashed_password):
             # Update last login
-            user.last_login = datetime.now(UTC)
-            return user
+            user_model.last_login = datetime.now(UTC)
+            self.session.commit()
+            return self._user_model_to_domain(user_model)
 
         return None
 
     def update_last_login(self, user_id: str) -> None:
         """Update the user's last login timestamp."""
-        user = self.get_user_by_id(user_id)
-        if user:
-            user.last_login = datetime.now(UTC)
+        user_model = (
+            self.session.query(UserModel)
+            .filter(UserModel.id == uuid.UUID(user_id))
+            .first()
+        )
+
+        if user_model:
+            user_model.last_login = datetime.now(UTC)
+            self.session.commit()
 
     def deactivate_user(self, user_id: str) -> bool:
         """Deactivate a user."""
-        user = self.get_user_by_id(user_id)
-        if user:
-            user.is_active = False
+        user_model = (
+            self.session.query(UserModel)
+            .filter(UserModel.id == uuid.UUID(user_id))
+            .first()
+        )
+
+        if user_model:
+            user_model.is_active = False
+            self.session.commit()
             return True
         return False
 
     def activate_user(self, user_id: str) -> bool:
         """Activate a user."""
-        user = self.get_user_by_id(user_id)
-        if user:
-            user.is_active = True
+        user_model = (
+            self.session.query(UserModel)
+            .filter(UserModel.id == uuid.UUID(user_id))
+            .first()
+        )
+
+        if user_model:
+            user_model.is_active = True
+            self.session.commit()
             return True
         return False
 
 
-# Global user repository instance (singleton pattern)
-_user_repository = None
-
-
-def get_user_repository() -> UserRepository:
-    """Get the user repository instance."""
-    global _user_repository
-    if _user_repository is None:
-        _user_repository = UserRepository()
-    return _user_repository
+def get_user_repository(session: Session) -> UserRepository:
+    """Get the user repository instance with dependency injection."""
+    return UserRepository(session)

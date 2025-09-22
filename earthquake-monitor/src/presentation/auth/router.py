@@ -4,6 +4,9 @@ from typing import Annotated
 
 from authx import TokenPayload
 from fastapi import APIRouter, Depends, HTTPException, status
+from sqlalchemy.orm import Session
+
+from src.infrastructure.database.config import get_session
 
 from ..exceptions import ResourceNotFoundError, ValidationError
 from .dependencies import get_current_user_payload
@@ -14,7 +17,7 @@ from .models import (
     UserLogin,
     UserResponse,
 )
-from .repository import UserRepository, get_user_repository
+from .repository import get_user_repository
 from .security import SecurityService, get_security_service
 
 router = APIRouter(prefix="/auth", tags=["authentication"])
@@ -25,10 +28,11 @@ router = APIRouter(prefix="/auth", tags=["authentication"])
 )
 async def register_user(
     user_data: UserCreate,
-    user_repo: Annotated[UserRepository, Depends(get_user_repository)],
+    session: Annotated[Session, Depends(get_session)],
 ) -> UserResponse:
     """Register a new user."""
     try:
+        user_repo = get_user_repository(session)
         user = user_repo.create_user(user_data)
         return UserResponse(
             id=user.id,
@@ -46,10 +50,11 @@ async def register_user(
 @router.post("/login", response_model=TokenResponse)
 async def login_user(
     login_data: UserLogin,
-    user_repo: Annotated[UserRepository, Depends(get_user_repository)],
+    session: Annotated[Session, Depends(get_session)],
     security: Annotated[SecurityService, Depends(get_security_service)],
 ) -> TokenResponse:
     """Authenticate a user and return tokens."""
+    user_repo = get_user_repository(session)
     user = user_repo.authenticate_user(login_data.email, login_data.password)
 
     if not user:
@@ -77,7 +82,7 @@ async def login_user(
 @router.post("/refresh", response_model=TokenResponse)
 async def refresh_token(
     refresh_data: RefreshTokenRequest,
-    user_repo: Annotated[UserRepository, Depends(get_user_repository)],
+    session: Annotated[Session, Depends(get_session)],
     security: Annotated[SecurityService, Depends(get_security_service)],
 ) -> TokenResponse:
     """Refresh an access token using a refresh token."""
@@ -86,6 +91,7 @@ async def refresh_token(
         payload = security.verify_refresh_token(refresh_data.refresh_token)
 
         # Get the user
+        user_repo = get_user_repository(session)
         user = user_repo.get_user_by_id(payload.sub)
         if not user or not user.is_active:
             raise HTTPException(
@@ -111,10 +117,11 @@ async def refresh_token(
 
 @router.get("/me", response_model=UserResponse)
 async def get_current_user_info(
-    user_repo: Annotated[UserRepository, Depends(get_user_repository)],
+    session: Annotated[Session, Depends(get_session)],
     payload: Annotated[TokenPayload, Depends(get_current_user_payload)],
 ) -> UserResponse:
     """Get the current authenticated user's information."""
+    user_repo = get_user_repository(session)
     user = user_repo.get_user_by_id(payload.sub)
     if not user or not user.is_active:
         raise ResourceNotFoundError("User", payload.sub)

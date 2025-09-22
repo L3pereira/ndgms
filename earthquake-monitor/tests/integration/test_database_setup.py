@@ -15,13 +15,49 @@ class DatabaseTestManager:
 
     def __init__(self):
         self.test_db_name = "earthquake_monitor_test"
-        self.main_db_url = "postgresql://postgres:password@localhost:5432/postgres"
+        # Auto-detect if running in Docker by checking if 'db' host is reachable
+        db_host = self._detect_db_host()
+        self.main_db_url = f"postgresql://postgres:password@{db_host}:5432/postgres"
         self.test_db_url = (
-            f"postgresql://postgres:password@localhost:5432/{self.test_db_name}"
+            f"postgresql://postgres:password@{db_host}:5432/{self.test_db_name}"
         )
+
+    def _detect_db_host(self):
+        """Auto-detect database host based on environment."""
+        import socket
+
+        # Check if running in Docker by trying to resolve 'db' hostname
+        try:
+            socket.gethostbyname("db")
+            return "db"  # Running in Docker
+        except (socket.gaierror, socket.herror):
+            return "localhost"  # Running locally
+
+    def _ensure_postgres_accessible(self, db_host):
+        """Ensure PostgreSQL is accessible and provide helpful error messages."""
+        if db_host == "localhost":
+            try:
+                test_engine = create_engine(
+                    f"postgresql://postgres:password@{db_host}:5432/postgres"
+                )
+                with test_engine.connect():
+                    pass  # Connection successful
+                test_engine.dispose()
+            except Exception as e:
+                print(f"❌ Cannot connect to local PostgreSQL: {e}")
+                print("📝 Please ensure PostgreSQL is running locally with:")
+                print("   - Host: localhost:5432")
+                print("   - User: postgres")
+                print("   - Password: password")
+                print("   - Database: postgres (default)")
+                raise
 
     def create_test_database(self):
         """Create test database if it doesn't exist."""
+        # Ensure PostgreSQL is accessible first
+        db_host = self._detect_db_host()
+        self._ensure_postgres_accessible(db_host)
+
         engine = create_engine(self.main_db_url, isolation_level="AUTOCOMMIT")
 
         try:
@@ -80,9 +116,9 @@ class DatabaseTestManager:
         env["DATABASE_URL"] = self.test_db_url
 
         try:
-            # Run migrations using the test configuration
+            # Run migrations using the main alembic configuration
             result = subprocess.run(
-                ["alembic", "-c", "alembic_test.ini", "upgrade", "head"],
+                ["alembic", "upgrade", "head"],
                 env=env,
                 capture_output=True,
                 text=True,
@@ -130,8 +166,10 @@ async def db_session(test_db_manager) -> AsyncGenerator[AsyncSession, None]:
 
     from src.infrastructure.database.config import create_async_engine, sessionmaker
 
+    # Use the same host detection as the test manager
+    db_host = test_db_manager._detect_db_host()
     test_engine = create_async_engine(
-        f"postgresql+asyncpg://postgres:password@localhost:5432/{test_db_manager.test_db_name}"
+        f"postgresql+asyncpg://postgres:password@{db_host}:5432/{test_db_manager.test_db_name}"
     )
     TestSessionLocal = sessionmaker(
         test_engine, class_=AsyncSessionClass, expire_on_commit=False

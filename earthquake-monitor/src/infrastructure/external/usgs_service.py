@@ -2,6 +2,7 @@
 
 import json
 import logging
+import os
 from datetime import UTC, datetime
 
 import httpx
@@ -17,8 +18,12 @@ class USGSService:
     """Service for fetching earthquake data from USGS GeoJSON feeds."""
 
     def __init__(self):
-        self.base_url = "https://earthquake.usgs.gov/earthquakes/feed/v1.0/summary"
-        self.client = httpx.AsyncClient(timeout=30.0)
+        self.base_url = os.getenv(
+            "USGS_GEOJSON_BASE_URL",
+            "https://earthquake.usgs.gov/earthquakes/feed/v1.0/summary",
+        )
+        timeout = float(os.getenv("USGS_API_TIMEOUT", "30"))
+        self.client = httpx.AsyncClient(timeout=timeout)
 
     async def close(self):
         """Close HTTP client."""
