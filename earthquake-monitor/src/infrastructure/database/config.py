@@ -4,10 +4,31 @@ import os
 from collections.abc import AsyncGenerator
 
 from sqlalchemy import create_engine
-from sqlalchemy.ext.asyncio import AsyncSession, create_async_engine
+from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.ext.asyncio import create_async_engine as _create_async_engine
 from sqlalchemy.orm import sessionmaker
 
 from .models import Base
+
+
+def create_async_engine(database_url: str, **kwargs):
+    """Create async engine with consistent configuration."""
+    # Default configuration for Docker/CI compatibility
+    default_kwargs = {
+        "echo": True,
+        "pool_pre_ping": True,
+        "pool_recycle": 300,
+        "connect_args": {
+            "server_settings": {
+                "jit": "off",
+            },
+            "command_timeout": 60,
+        },
+    }
+    default_kwargs.update(kwargs)
+
+    return _create_async_engine(database_url, **default_kwargs)
+
 
 # Database URL from environment variables
 DATABASE_URL = os.getenv(
@@ -17,9 +38,9 @@ DATABASE_URL = os.getenv(
 # For async operations
 ASYNC_DATABASE_URL = DATABASE_URL.replace("postgresql://", "postgresql+asyncpg://")
 
-# Create engines
+# Create engines with better connection handling for Docker/CI environments
 engine = create_engine(DATABASE_URL)
-async_engine = create_async_engine(ASYNC_DATABASE_URL, echo=True)
+async_engine = create_async_engine(ASYNC_DATABASE_URL)
 
 # Session makers
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
@@ -33,6 +54,9 @@ async def get_async_session() -> AsyncGenerator[AsyncSession, None]:
     async with AsyncSessionLocal() as session:
         try:
             yield session
+        except Exception:
+            await session.rollback()
+            raise
         finally:
             await session.close()
 
