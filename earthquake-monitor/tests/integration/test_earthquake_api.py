@@ -1,5 +1,7 @@
 """Integration tests for earthquake API endpoints."""
 
+from datetime import datetime, timedelta
+
 import pytest
 from httpx import AsyncClient
 
@@ -51,6 +53,62 @@ class TestEarthquakeAPI:
         invalid_data["longitude"] = 200.0  # Invalid longitude > 180
         response = await client_with_db.post("/api/v1/earthquakes/", json=invalid_data)
         assert response.status_code == 422
+
+    @pytest.mark.asyncio
+    async def test_create_earthquake_future_date_returns_400(
+        self, client_with_db: AsyncClient
+    ):
+        """Test that creating earthquake with future date returns 400 Bad Request with domain error."""
+        future_date = (datetime.now() + timedelta(hours=1)).isoformat()
+
+        future_earthquake_data = {
+            "latitude": 37.7749,
+            "longitude": -122.4194,
+            "depth": 10.0,
+            "magnitude_value": 5.5,
+            "magnitude_scale": "moment",
+            "occurred_at": future_date,
+            "source": "TEST_API",
+        }
+
+        response = await client_with_db.post(
+            "/api/v1/earthquakes/", json=future_earthquake_data
+        )
+
+        # Should return 400 Bad Request (domain validation error)
+        assert response.status_code == 400
+        error_data = response.json()
+        assert "detail" in error_data
+        assert (
+            "Earthquake occurrence time cannot be in the future" in error_data["detail"]
+        )
+
+    @pytest.mark.asyncio
+    async def test_create_earthquake_past_date_succeeds(
+        self, client_with_db: AsyncClient
+    ):
+        """Test that creating earthquake with past date succeeds."""
+        past_date = (datetime.now() - timedelta(hours=1)).isoformat()
+
+        past_earthquake_data = {
+            "latitude": 37.7749,
+            "longitude": -122.4194,
+            "depth": 10.0,
+            "magnitude_value": 5.5,
+            "magnitude_scale": "moment",
+            "occurred_at": past_date,
+            "source": "TEST_API",
+        }
+
+        response = await client_with_db.post(
+            "/api/v1/earthquakes/", json=past_earthquake_data
+        )
+
+        # Should succeed with 201 Created
+        assert response.status_code == 201
+        data = response.json()
+        assert "id" in data
+        assert "message" in data
 
     @pytest.mark.asyncio
     async def test_get_earthquakes_list_structure(self, client_with_db: AsyncClient):

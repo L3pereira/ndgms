@@ -13,6 +13,7 @@ from src.application.events.event_handlers import EarthquakeEventHandlers
 from src.application.events.event_publisher import InMemoryEventPublisher
 from src.domain.events.earthquake_detected import EarthquakeDetected
 from src.domain.events.high_magnitude_alert import HighMagnitudeAlert
+from src.domain.exceptions import DomainException
 
 from .auth.router import router as auth_router
 from .auth.security import get_security_service
@@ -238,6 +239,16 @@ async def validation_error_handler(
 ) -> JSONResponse:
     logger.warning(
         f"Validation error in {request.method} {request.url.path}: {exc.message}"
+    )
+    return JSONResponse(status_code=400, content={"detail": exc.message})
+
+
+@app.exception_handler(DomainException)
+async def domain_exception_handler(
+    request: Request, exc: DomainException
+) -> JSONResponse:
+    logger.warning(
+        f"Domain validation error in {request.method} {request.url.path}: {exc.message}"
     )
     return JSONResponse(status_code=400, content={"detail": exc.message})
 

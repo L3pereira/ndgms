@@ -30,8 +30,10 @@ class EarthquakeEventHandlers:
             )
             from src.infrastructure.factory import create_earthquake_repository
 
-            session = await get_async_session_for_background()
-            self._earthquake_repository = await create_earthquake_repository(session)
+            async with get_async_session_for_background() as session:
+                self._earthquake_repository = await create_earthquake_repository(
+                    session
+                )
 
         return self._earthquake_repository
 

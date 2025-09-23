@@ -230,7 +230,7 @@ class ComprehensiveAPITester:
             "latitude": 37.7749,
             "longitude": -122.4194,
             "depth": 10.0,
-            "occurred_at": datetime.now().isoformat(),
+            "occurred_at": "2024-01-01T12:00:00Z",
             "source": "TEST_API",
         }
 
