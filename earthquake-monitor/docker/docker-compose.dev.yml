@@ -3,7 +3,7 @@ services:
     build:
       context: ..
       dockerfile: docker/Dockerfile
-    image: earthquake-monitor:latest
+    image: earthquake-monitor:dev
     ports:
       - "8000:8000"
     env_file:
@@ -20,7 +20,7 @@ services:
     build:
       context: ..
       dockerfile: docker/Dockerfile
-    image: earthquake-monitor:latest
+    image: earthquake-monitor:test
     env_file:
       - ../.env.dev
     environment:
