@@ -87,6 +87,8 @@ logs/
 .env.development
 .env.test
 .env.production
+.env.dev
+.env.prod
 
 # Alembic (only ignore cache files, keep migration files)
 alembic/versions/__pycache__/

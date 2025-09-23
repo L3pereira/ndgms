@@ -9,8 +9,9 @@ RUN apt-get update && apt-get install -y \
     postgresql-client \
     && rm -rf /var/lib/apt/lists/*
 
-# Copy requirements file
+# Copy requirements file and project configuration
 COPY requirements.txt ./
+COPY pyproject.toml ./
 
 # Install Python dependencies
 RUN pip install --no-cache-dir -r requirements.txt
@@ -24,9 +25,6 @@ COPY alembic.ini ./
 
 # Copy scripts
 COPY scripts/ ./scripts/
-
-# Copy environment configuration
-COPY .env.docker ./.env
 
 # Copy and make startup script executable
 COPY docker/startup.sh ./startup.sh

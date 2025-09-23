@@ -46,9 +46,10 @@ class CreateEarthquakeUseCase:
         if request.raw_data:
             earthquake.raw_data = request.raw_data
 
-        # Save to repository
+        # Save to repository (commit happens here)
         await self._earthquake_repository.save(earthquake)
 
+        # Publish events AFTER database commit to ensure data consistency
         # Publish earthquake detected event
         earthquake_detected = EarthquakeDetected(
             earthquake_id=earthquake.id,

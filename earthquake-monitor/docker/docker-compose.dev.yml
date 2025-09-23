@@ -6,16 +6,35 @@ services:
     image: earthquake-monitor:latest
     ports:
       - "8000:8000"
-    environment:
-      - DATABASE_URL=postgresql://postgres:password@db:5432/earthquake_monitor_dev
-      - DEBUG=true
-      - LOG_LEVEL=DEBUG
+    env_file:
+      - ../.env.dev
     depends_on:
       - db
     volumes:
       - ../src:/app/src  # Mount source for hot reload
       - ../tests:/app/tests  # Mount tests for development and testing
+      - ../pyproject.toml:/app/pyproject.toml  # Mount pytest configuration
     command: ["./startup.sh"]
+
+  test:
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile
+    image: earthquake-monitor:latest
+    env_file:
+      - ../.env.dev
+    environment:
+      - DATABASE_URL=postgresql://postgres:password@db:5432/earthquake_monitor_test
+      - TESTING=true
+    depends_on:
+      - db
+    volumes:
+      - ../src:/app/src
+      - ../tests:/app/tests
+      - ../pyproject.toml:/app/pyproject.toml
+    command: ["pytest", "-v", "--cov=src", "--cov-report=term-missing"]
+    profiles:
+      - testing
 
   db:
     image: postgis/postgis:15-3.3

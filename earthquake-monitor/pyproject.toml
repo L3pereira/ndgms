@@ -6,28 +6,33 @@ authors = ["Your Name <your.email@example.com>"]
 readme = "README.md"
 
 [tool.poetry.dependencies]
-python = "^3.11"
-fastapi = "^0.116.2"
-uvicorn = "^0.35.0"
+python = "^3.12"
+fastapi = "0.117.1"
+uvicorn = "0.36.0"
 sqlalchemy = "^2.0.43"
-psycopg2-binary = "^2.9.10"
-alembic = "^1.16.5"
-pydantic = "^2.7.0"
-python-jose = {extras = ["cryptography"], version = "^3.5.0"}
-python-multipart = "^0.0.20"
-bcrypt = "^4.2.1"
-httpx = "^0.28.1"
-python-dotenv = "^1.1.1"
+psycopg2-binary = "2.9.10"
+alembic = "1.16.5"
+pydantic = "2.11.9"
+python-jose = {extras = ["cryptography"], version = "3.5.0"}
+python-multipart = "0.0.20"
+bcrypt = "4.3.0"
+httpx = "0.28.1"
+python-dotenv = "1.1.1"
+asyncpg = "0.30.0"
+geoalchemy2 = "0.18.0"
+authx = "1.4.3"
+email-validator = "2.3.0"
+apscheduler = "3.11.0"
 
 [tool.poetry.group.dev.dependencies]
-pytest = "^8.4.2"
-pytest-asyncio = "^1.2.0"
-pytest-cov = "^4.1.0"
-black = "^25.1.0"
-isort = "^6.0.1"
-ruff = "^0.8.4"
-mypy = "^1.7.1"
-pre-commit = "^4.3.0"
+pytest = "8.4.2"
+pytest-asyncio = "1.2.0"
+pytest-cov = "7.0.0"
+black = "25.9.0"
+isort = "6.0.1"
+ruff = "0.13.1"
+mypy = "1.7.1"
+pre-commit = "4.3.0"
 
 [build-system]
 requires = ["poetry-core"]
@@ -35,14 +40,14 @@ build-backend = "poetry.core.masonry.api"
 
 [tool.black]
 line-length = 88
-target-version = ['py311']
+target-version = ['py312']
 
 [tool.isort]
 profile = "black"
 multi_line_output = 3
 
 [tool.mypy]
-python_version = "3.11"
+python_version = "3.12"
 warn_return_any = true
 warn_unused_configs = true
 disallow_untyped_defs = true
@@ -58,7 +63,7 @@ asyncio_default_fixture_loop_scope = "function"
 
 [tool.ruff]
 line-length = 88
-target-version = "py311"
+target-version = "py312"
 
 [tool.ruff.lint]
 select = [

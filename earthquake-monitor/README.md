@@ -2,16 +2,15 @@
 
 A comprehensive real-time earthquake monitoring system built with Clean Architecture principles, featuring USGS data ingestion, secure API access, and WebSocket real-time updates.
 
-[![Tests](https://github.com/L3pereira/ndgms/workflows/Tests/badge.svg)](https://github.com/L3pereira/ndgms/actions)
-[![Coverage](https://codecov.io/gh/L3pereira/ndgms/branch/main/graph/badge.svg)](https://codecov.io/gh/L3pereira/ndgms)
-[![Python](https://img.shields.io/badge/python-3.11%2B-blue)](https://www.python.org)
-[![FastAPI](https://img.shields.io/badge/FastAPI-0.116.2-009688.svg)](https://fastapi.tiangolo.com)
-[![License](https://img.shields.io/badge/license-MIT-green)](LICENSE)
+[![Python](https://img.shields.io/badge/python-3.12%2B-blue)](https://www.python.org)
+[![FastAPI](https://img.shields.io/badge/FastAPI-0.117.1-009688.svg)](https://fastapi.tiangolo.com)
+
 
 ## 🚀 Features
 
 ### **Core Capabilities**
 - **🌐 Real-time Data Ingestion** - Automated USGS earthquake data collection
+- **⏰ Intelligent Scheduler** - Configurable interval-based data ingestion with dependency injection architecture
 - **🔒 Secure RESTful API** - OAuth2 JWT authentication with role-based access
 - **📡 WebSocket Support** - Live earthquake notifications and updates
 - **🔍 Advanced Filtering** - Search by magnitude, location, time, and source with PostGIS spatial queries
@@ -188,10 +187,11 @@ curl -X GET "http://localhost:8000/api/v1/earthquakes" \
 |--------|----------|-------------|---------------|
 | `WS` | `/api/v1/ws` | WebSocket endpoint for real-time updates | ✅ |
 
-#### **🏥 System Health**
+#### **🏥 System Health & Monitoring**
 | Method | Endpoint | Description | Auth Required |
 |--------|----------|-------------|---------------|
 | `GET` | `/health` | System health check | ❌ |
+| `GET` | `/test-scheduler` | Check scheduler status and job details | ❌ |
 
 ### **Filtering Examples**
 
@@ -546,6 +546,12 @@ USGS_GEOJSON_BASE_URL=https://earthquake.usgs.gov/earthquakes/feed/v1.0/summary
 USGS_API_TIMEOUT=30
 USGS_POLLING_INTERVAL=300
 
+# Automated Scheduler Configuration
+SCHEDULER_ENABLED=true
+USGS_INGESTION_INTERVAL_MINUTES=30
+USGS_INGESTION_MIN_MAGNITUDE=2.5
+USGS_INGESTION_PERIOD=hour
+
 # Security
 ALLOWED_ORIGINS=http://localhost:3000,https://app.ndgms.org
 ALLOWED_HOSTS=localhost,127.0.0.1,api.ndgms.org
@@ -613,6 +619,75 @@ alembic downgrade -1
 # Check migration status
 alembic current
 ```
+
+### **⏰ Automated Scheduler System**
+
+The system features a robust automated data ingestion scheduler built with dependency injection for clean testing and production reliability:
+
+#### **Scheduler Features**
+- **🔄 Automatic USGS Data Ingestion** - Configurable interval-based earthquake data collection
+- **🧪 Clean Architecture** - Dependency injection pattern for testable, isolated scheduler instances
+- **⚡ Event Loop Compatibility** - Handles both production and test environments seamlessly
+- **🛡️ Error Resilience** - Graceful handling of API failures and network interruptions
+- **📊 Job Monitoring** - Real-time status tracking and job management capabilities
+- **🔧 Environment Configuration** - Flexible scheduling intervals and data filtering
+
+#### **Scheduler Configuration**
+```bash
+# Scheduler Settings
+SCHEDULER_ENABLED=true                          # Enable/disable scheduled ingestion
+USGS_INGESTION_INTERVAL_MINUTES=30             # Ingestion frequency (default: 30 minutes)
+USGS_INGESTION_MIN_MAGNITUDE=2.5               # Minimum magnitude filter (default: 2.5)
+USGS_INGESTION_PERIOD=hour                     # Time period for data fetch (hour/day/week)
+```
+
+#### **Scheduler Architecture**
+```mermaid
+flowchart TD
+    A[🔧 Application Startup] --> B[🏭 SchedulerService Factory]
+    B --> C[⏰ BackgroundScheduler Instance]
+    C --> D[📅 USGS Ingestion Job]
+    D --> E[🌐 USGS API Client]
+    E --> F[📊 Data Processing Pipeline]
+    F --> G[🗄️ Database Storage]
+    F --> H[📨 Event Broadcasting]
+
+    I[🧪 Test Environment] --> J[🏗️ Clean Scheduler Instance]
+    J --> K[🔀 Isolated Job Testing]
+
+    L[🛑 Application Shutdown] --> M[⏹️ Graceful Scheduler Stop]
+    M --> N[🔄 Job State Reset]
+```
+
+#### **Scheduler Management API**
+```bash
+# Check scheduler status
+GET /test-scheduler
+
+# Response example
+{
+  "scheduler": {
+    "enabled": true,
+    "running": true,
+    "jobs": 1,
+    "job_list": ["usgs_ingestion"],
+    "job_details": {
+      "usgs_ingestion": {
+        "id": "usgs_ingestion",
+        "name": "usgs_ingestion",
+        "next_run": "2024-01-15T15:00:00+00:00",
+        "trigger": "interval[0:30:00]"
+      }
+    }
+  }
+}
+```
+
+#### **Dependency Injection Benefits**
+- **🧪 Clean Testing**: Each test creates isolated scheduler instances
+- **🔄 No Global State**: Eliminates test interference and race conditions
+- **🏗️ Flexible Architecture**: Easy mocking and dependency substitution
+- **📈 Better Coverage**: Comprehensive testing of scheduler lifecycle and error scenarios
 
 ### **🌍 USGS Data Integration**
 
@@ -786,10 +861,11 @@ pytest -v
 
 ### **Test Categories**
 
-- **📝 Unit Tests** (42 tests): Test individual components in isolation
-- **🔗 Integration Tests** (45 tests): Test component interactions
+- **📝 Unit Tests** (54+ tests): Test individual components in isolation
+- **🔗 Integration Tests** (55+ tests): Test component interactions
 - **🌐 API Tests**: End-to-end API functionality
 - **🗄️ Database Tests**: Database operations and migrations
+- **⏰ Scheduler Tests**: Automated ingestion and job management testing
 
 ### **Test Coverage**
 

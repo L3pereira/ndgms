@@ -2,6 +2,7 @@ import logging
 import os
 import time
 from collections.abc import Callable
+from contextlib import asynccontextmanager
 
 from fastapi import FastAPI, Request, Response
 from fastapi.middleware.cors import CORSMiddleware
@@ -24,7 +25,63 @@ logging.basicConfig(
 )
 logger = logging.getLogger(__name__)
 
+
+@asynccontextmanager
+async def lifespan(app):
+    """Handle application startup and shutdown."""
+    # Startup
+    print("🔥 LIFESPAN STARTUP")
+    logger.info("Starting earthquake monitor application...")
+
+    # Initialize scheduler service with dependency injection
+    scheduler_enabled = os.getenv("SCHEDULER_ENABLED", "true").lower() == "true"
+    logger.info(f"Scheduler enabled: {scheduler_enabled}")
+
+    if scheduler_enabled:
+        try:
+            from src.infrastructure.scheduler.scheduler_service import (
+                get_scheduler_service,
+                start_scheduler,
+            )
+
+            logger.info("Starting background scheduler service...")
+            await start_scheduler()
+            scheduler_service = await get_scheduler_service()
+            logger.info("Background scheduler service started successfully")
+        except Exception as e:
+            logger.error(
+                f"Failed to start background scheduler service: {e}", exc_info=True
+            )
+            scheduler_service = None
+    else:
+        logger.info("Background scheduler disabled via SCHEDULER_ENABLED=false")
+        scheduler_service = None
+
+    # Store scheduler service in app state for access during runtime
+    app.state.scheduler_service = scheduler_service
+
+    logger.info("Application startup completed")
+
+    yield
+
+    # Shutdown
+    print("🔥 LIFESPAN SHUTDOWN")
+    logger.info("Shutting down earthquake monitor application...")
+
+    if scheduler_service:
+        try:
+            await scheduler_service.stop()  # Note: stop() is now async again
+            logger.info("Background scheduler service stopped successfully")
+        except Exception as e:
+            logger.error(
+                f"Error stopping background scheduler service: {e}", exc_info=True
+            )
+
+    logger.info("Application shutdown completed")
+
+
 app = FastAPI(
+    lifespan=lifespan,
     title="Earthquake Monitor API",
     description="""
     # 🌍 NDGMS Earthquake Monitoring System
@@ -202,7 +259,10 @@ async def general_exception_handler(request: Request, exc: Exception) -> JSONRes
 # Set up event system
 event_publisher = InMemoryEventPublisher()
 websocket_manager = websocket.get_websocket_manager()
-event_handlers = EarthquakeEventHandlers(websocket_manager)
+
+# Note: Event handlers will get repository via dependency injection when needed
+# This avoids sync/async issues during app startup
+event_handlers = EarthquakeEventHandlers(websocket_manager, None)
 
 # Subscribe event handlers
 event_publisher.subscribe(EarthquakeDetected, event_handlers.handle_earthquake_detected)
@@ -224,6 +284,33 @@ app.include_router(websocket.router, prefix="/api/v1")
 @app.get("/health")
 async def health_check():
     return {"status": "healthy"}
+
+
+@app.get("/test-scheduler")
+async def test_scheduler(request: Request):
+    """Test endpoint to manually check scheduler status."""
+    scheduler_enabled = os.getenv("SCHEDULER_ENABLED", "true").lower() == "true"
+
+    if (
+        scheduler_enabled
+        and hasattr(request.app.state, "scheduler_service")
+        and request.app.state.scheduler_service
+    ):
+        try:
+            scheduler_service = request.app.state.scheduler_service
+            jobs = scheduler_service.list_jobs()
+            scheduler_status = {
+                "enabled": True,
+                "running": scheduler_service.scheduler.running,
+                "jobs": len(jobs),
+                "job_list": list(jobs.keys()),
+                "job_details": jobs,
+            }
+            return {"scheduler": scheduler_status}
+        except Exception as e:
+            return {"scheduler": {"enabled": True, "error": str(e)}}
+    else:
+        return {"scheduler": {"enabled": False}}
 
 
 def get_event_publisher():

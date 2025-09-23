@@ -63,6 +63,72 @@ class TestAuthAPI:
         response = client.post("/api/v1/auth/register", json=invalid_data)
         assert response.status_code == 422
 
+    def test_register_user_missing_username(self, client: TestClient):
+        """Test registration fails when username field is missing."""
+        # This test catches the exact issue found in manual testing
+        user_data = {
+            "email": "test-missing-username@example.com",
+            "password": "SecurePass123!",
+            "full_name": "Test User Missing Username",
+            # Intentionally missing "username" field
+        }
+
+        response = client.post("/api/v1/auth/register", json=user_data)
+
+        assert response.status_code == 422
+        error_data = response.json()
+
+        # Verify the error specifically mentions missing username
+        assert "detail" in error_data
+        username_error = None
+        for error in error_data["detail"]:
+            if (
+                error.get("loc") == ["body", "username"]
+                and error.get("type") == "missing"
+            ):
+                username_error = error
+                break
+
+        assert (
+            username_error is not None
+        ), "Should have error for missing username field"
+        assert "required" in username_error["msg"].lower()
+
+    def test_register_user_missing_individual_required_fields(self, client: TestClient):
+        """Test registration fails for each missing required field."""
+        base_data = {
+            "email": "test@example.com",
+            "username": "testuser",
+            "full_name": "Test User",
+            "password": "password123",
+        }
+
+        required_fields = ["email", "username", "full_name", "password"]
+
+        for field in required_fields:
+            # Create data missing one required field
+            incomplete_data = base_data.copy()
+            del incomplete_data[field]
+
+            response = client.post("/api/v1/auth/register", json=incomplete_data)
+
+            assert response.status_code == 422, f"Should fail when missing {field}"
+            error_data = response.json()
+
+            # Verify error mentions the missing field
+            field_error = None
+            for error in error_data["detail"]:
+                if (
+                    error.get("loc") == ["body", field]
+                    and error.get("type") == "missing"
+                ):
+                    field_error = error
+                    break
+
+            assert (
+                field_error is not None
+            ), f"Should have error for missing {field} field"
+
     def test_login_success(self, client: TestClient):
         """Test successful user login."""
         # Register user first

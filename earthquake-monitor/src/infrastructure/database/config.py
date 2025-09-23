@@ -71,6 +71,18 @@ async def get_async_session() -> AsyncGenerator[AsyncSession, None]:
             await session.close()
 
 
+async def get_async_session_for_background() -> AsyncGenerator[AsyncSession, None]:
+    """Get async database session for background tasks."""
+    async with AsyncSessionLocal() as session:
+        try:
+            yield session
+        except Exception:
+            await session.rollback()
+            raise
+        finally:
+            await session.close()
+
+
 def get_session():
     """Get synchronous database session."""
     db = SessionLocal()

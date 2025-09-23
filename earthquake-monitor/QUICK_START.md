@@ -7,22 +7,48 @@ This guide will get you up and running with the Earthquake Monitor API in under 
 - Docker & Docker Compose installed
 - 8000 and 5432 ports available
 
-## ⚡ One-Command Setup
+## ⚡ Setup (Under 5 Minutes)
 
 ```bash
-# Clone and start everything
+# Clone the repository
 git clone https://github.com/L3pereira/ndgms.git
 cd ndgms/earthquake-monitor
+
+# Create production environment file
+cp .env.example .env.prod
+
+# Start all services
 docker-compose -f docker/docker-compose.yml up --build -d
 ```
 
 **Wait ~2-3 minutes for services to start...**
+
+> **Note**: The `.env.prod` file contains all necessary defaults for testing. For production deployment, update the secret keys and database credentials.
 
 ## 📊 Load Test Data
 
 ```bash
 # Ingest real USGS earthquake data for testing
 ./docker/test-data.sh
+```
+
+## 🛠️ Development Environment (Optional)
+
+For development with hot reload and testing:
+
+```bash
+# Create development environment file
+cp .env.example .env.dev
+
+# Start development environment with hot reload
+docker-compose -f docker/docker-compose.dev.yml up --build -d
+
+# Run all tests with coverage
+docker-compose -f docker/docker-compose.dev.yml --profile testing up test
+
+# Run specific test suites
+docker-compose -f docker/docker-compose.dev.yml run --rm test pytest tests/unit/ -v
+docker-compose -f docker/docker-compose.dev.yml run --rm test pytest tests/integration/ -v
 ```
 
 ## 🧪 Test the System
@@ -66,6 +92,14 @@ curl -X POST "http://localhost:8000/api/v1/ingestion/trigger" \
   -d '{"source": "USGS", "period": "day", "magnitude_filter": "4.5"}'
 ```
 
+### 6. **Check Automated Scheduler Status**
+```bash
+# Monitor the automated ingestion scheduler
+curl -X GET "http://localhost:8000/test-scheduler"
+
+# Expected: Shows scheduler running status and job details
+```
+
 ## 🌐 Interactive Testing
 
 - **API Documentation**: http://localhost:8000/docs
@@ -98,25 +132,10 @@ docker volume rm earthquake-monitor_postgres_data  # Optional: removes data
 
 ## 🔍 Key Features to Test
 
-### **Clean Architecture**
-- Domain logic isolated in `src/domain/`
-- Use cases in `src/application/use_cases/`
-- Repository pattern with PostgreSQL implementation
-
 ### **Real-time Features**
 - WebSocket connections for live earthquake updates
 - Event-driven architecture with domain events
 - High-magnitude alert system (≥5.0 magnitude)
-
-### **Advanced Filtering**
-- PostGIS spatial queries for geographic filtering
-- Time-based filtering with ISO datetime formats
-- Magnitude range filtering with scientific classifications
-
-### **Data Integration**
-- Live USGS earthquake data ingestion
-- Two ingestion methods: GeoJSON feeds & FDSNWS API
-- Automatic duplicate detection and data validation
 
 ## 📞 Troubleshooting
 
@@ -137,4 +156,26 @@ docker-compose -f docker/docker-compose.yml restart db
 
 ---
 
-**Ready for questions about Clean Architecture, Domain-Driven Design, Event Sourcing, Spatial Databases, Real-time Systems, and more!** 🎯
+## 🎯 **Interview Focus Areas**
+
+This implementation demonstrates expertise in:
+
+### **Backend Architecture**
+- **Clean Architecture** with proper layer separation (Domain → Application → Infrastructure → Presentation)
+- **Dependency Injection** with testable, isolated components
+- **Repository Pattern** with PostgreSQL implementation
+- **Domain-Driven Design** with rich entities and domain events
+
+### **System Design & Scalability**
+- **Event-Driven Architecture** with real-time WebSocket broadcasting
+- **Automated Background Processing** with APScheduler and error resilience
+- **Spatial Database Integration** with PostGIS for geographic queries
+- **API Design** with comprehensive filtering, pagination, and authentication
+
+### **Development & Testing**
+- **95%+ Test Coverage** with unit and integration tests
+- **Docker Multi-Environment** setup (dev/prod) with proper secret management
+- **CI/CD Ready** with comprehensive testing and linting
+- **Production Monitoring** with health checks and scheduler status endpoints
+
+**Ready for deep-dive discussions on any of these topics!** 🚀

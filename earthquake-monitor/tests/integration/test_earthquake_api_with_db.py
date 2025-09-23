@@ -11,7 +11,7 @@ class TestEarthquakeAPIWithDatabase:
 
     @pytest.mark.asyncio
     async def test_create_earthquake_in_database(
-        self, client_with_db: AsyncClient, sample_earthquake_data: dict
+        self, client_with_db: AsyncClient, sample_earthquake_data: dict, db_session
     ):
         """Test earthquake creation with real database storage."""
         response = await client_with_db.post(
@@ -38,11 +38,19 @@ class TestEarthquakeAPIWithDatabase:
             == sample_earthquake_data["latitude"]
         )
 
+        # Clean up: rollback the test data
+        await db_session.rollback()
+
     @pytest.mark.asyncio
     async def test_earthquake_persistence_across_requests(
-        self, client_with_db: AsyncClient, sample_earthquake_data: dict
+        self, client_with_db: AsyncClient, sample_earthquake_data: dict, db_session
     ):
         """Test that earthquakes persist in database across requests."""
+        # Clear any existing earthquakes to ensure clean test
+        from sqlalchemy import text
+
+        await db_session.execute(text("DELETE FROM earthquakes"))
+        await db_session.commit()
         # Create first earthquake
         response1 = await client_with_db.post(
             "/api/v1/earthquakes/", json=sample_earthquake_data
@@ -84,6 +92,9 @@ class TestEarthquakeAPIWithDatabase:
         earthquake_ids = [eq["id"] for eq in earthquakes]
         assert earthquake_id1 in earthquake_ids
         assert earthquake_id2 in earthquake_ids
+
+        # Clean up: rollback the test data
+        await db_session.rollback()
 
     @pytest.mark.asyncio
     async def test_earthquake_filtering_with_database(
@@ -156,7 +167,9 @@ class TestEarthquakeAPIWithDatabase:
         # Session should rollback after test, so earthquake won't persist
 
     @pytest.mark.asyncio
-    async def test_data_ingestion_with_database(self, client_with_db: AsyncClient):
+    async def test_data_ingestion_with_database(
+        self, client_with_db: AsyncClient, db_session
+    ):
         """Test data ingestion endpoint (may fail if external service unavailable)."""
         # Test ingestion endpoint
         ingestion_request = {
@@ -192,3 +205,6 @@ class TestEarthquakeAPIWithDatabase:
         else:
             # External service unavailable - this is acceptable for integration tests
             print("USGS service unavailable - skipping data verification")
+
+        # Clean up: rollback any test data that might have been created
+        await db_session.rollback()

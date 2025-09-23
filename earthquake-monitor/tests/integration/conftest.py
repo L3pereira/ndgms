@@ -244,6 +244,21 @@ def auth_headers(client):
         return {}
 
 
+@pytest_asyncio.fixture
+async def async_auth_headers(client_with_db):
+    """Get authentication headers with a valid token for async client."""
+    # Use the default test user that's already created
+    login_data = {"email": "test@earthquake-monitor.com", "password": "testpass123"}
+    response = await client_with_db.post("/api/v1/auth/login", json=login_data)
+
+    if response.status_code == 200:
+        token_data = response.json()
+        return {"Authorization": f"Bearer {token_data['access_token']}"}
+    else:
+        # Fallback: return empty headers for tests that expect auth failure
+        return {}
+
+
 @pytest_asyncio.fixture(autouse=True)
 async def cleanup_earthquake_data():
     """Clean up earthquake data after each test."""
