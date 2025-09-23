@@ -1,7 +1,7 @@
 """Integration tests for scheduler service with real dependencies."""
 
 import os
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from unittest.mock import patch
 
 import pytest
@@ -31,7 +31,7 @@ class TestSchedulerIntegration:
             Earthquake(
                 location=Location(latitude=37.7749, longitude=-122.4194, depth=10.0),
                 magnitude=Magnitude(value=3.5, scale=MagnitudeScale.MOMENT),
-                occurred_at=datetime.now(timezone.utc),
+                occurred_at=datetime.now(UTC),
                 source="USGS",
             )
         ]

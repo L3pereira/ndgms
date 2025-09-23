@@ -2,7 +2,7 @@
 
 import logging
 import os
-from typing import Any, Dict, Optional
+from typing import Any
 
 from apscheduler.executors.asyncio import AsyncIOExecutor
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
@@ -68,7 +68,7 @@ async def ingest_usgs_data_async() -> None:
 class SchedulerService:
     """Manages async scheduled tasks using AsyncIOScheduler."""
 
-    def __init__(self, scheduler: Optional[AsyncIOScheduler] = None):
+    def __init__(self, scheduler: AsyncIOScheduler | None = None):
         """Initialize async scheduler service."""
         self.scheduler = scheduler or AsyncIOScheduler(
             executors={"default": AsyncIOExecutor()}, timezone="UTC"
@@ -142,7 +142,7 @@ class SchedulerService:
 
         self.start()
 
-    def get_job_status(self, job_id: str) -> Optional[Dict[str, Any]]:
+    def get_job_status(self, job_id: str) -> dict[str, Any] | None:
         """Get status of a specific job."""
         job = self.scheduler.get_job(job_id)
         if job is None:
@@ -155,7 +155,7 @@ class SchedulerService:
             "trigger": str(job.trigger),
         }
 
-    def list_jobs(self) -> Dict[str, Dict[str, Any]]:
+    def list_jobs(self) -> dict[str, dict[str, Any]]:
         """List all scheduled jobs and their status."""
         jobs = {}
         for job in self.scheduler.get_jobs():
@@ -179,7 +179,7 @@ class SchedulerService:
 
 
 # Global scheduler instance for production use
-_global_scheduler_service: Optional[SchedulerService] = None
+_global_scheduler_service: SchedulerService | None = None
 
 
 async def get_scheduler_service() -> SchedulerService:

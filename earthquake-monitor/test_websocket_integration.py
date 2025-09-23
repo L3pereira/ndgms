@@ -33,7 +33,7 @@ class IntegrationTester:
 
             data = response.json()
             self.access_token = data["access_token"]
-            print(f"✅ Authenticated successfully")
+            print("✅ Authenticated successfully")
 
     async def check_scheduler_status(self):
         """Check if scheduler is running"""
@@ -95,14 +95,14 @@ class IntegrationTester:
                 start_time = time.time()
                 end_time = start_time + (duration_minutes * 60)
 
-                print(f"\\n👂 Listening for events...")
+                print("\\n👂 Listening for events...")
                 print(
                     f"   Expected scheduler runs: ~{duration_minutes * 3} (every 20 seconds)"
                 )
-                print(f"   Looking for NEW earthquakes only (no duplicates)")
-                print(f"   High magnitude alerts: magnitude ≥ 5.0")
+                print("   Looking for NEW earthquakes only (no duplicates)")
+                print("   High magnitude alerts: magnitude ≥ 5.0")
                 print(
-                    f"   Min magnitude for ingestion: 1.0 (should capture more events)"
+                    "   Min magnitude for ingestion: 1.0 (should capture more events)"
                 )
                 print()
 
@@ -114,17 +114,17 @@ class IntegrationTester:
 
                         await self.process_event(event_data)
 
-                    except asyncio.TimeoutError:
+                    except TimeoutError:
                         remaining = int(end_time - time.time())
                         print(
                             f"⏳ No events in last 25s (waiting {remaining}s more...)"
                         )
                         continue
 
-                print(f"\\n📊 Final Summary:")
+                print("\\n📊 Final Summary:")
                 print(f"   Total events received: {len(self.received_events)}")
                 print(f"   Unique earthquakes: {len(self.earthquake_ids_seen)}")
-                print(f"   Event types breakdown:")
+                print("   Event types breakdown:")
 
                 event_types = {}
                 for event in self.received_events:
@@ -163,7 +163,7 @@ class IntegrationTester:
             print(f"          ID: {earthquake_id}")
 
             if not is_new:
-                print(f"          ⚠️  WARNING: Received duplicate earthquake event!")
+                print("          ⚠️  WARNING: Received duplicate earthquake event!")
 
         elif event_type == "high_magnitude_alert":
             data = event_data.get("data", {})
@@ -231,7 +231,7 @@ async def main():
         final_count = await tester.get_current_earthquake_count()
         new_earthquakes = final_count - initial_count
 
-        print(f"\\n📈 Database changes:")
+        print("\\n📈 Database changes:")
         print(f"   Initial count: {initial_count}")
         print(f"   Final count: {final_count}")
         print(f"   New earthquakes: {new_earthquakes}")

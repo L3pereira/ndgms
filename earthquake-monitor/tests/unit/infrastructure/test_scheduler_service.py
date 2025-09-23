@@ -2,9 +2,8 @@
 
 import asyncio
 import os
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from unittest.mock import AsyncMock, patch
-from uuid import uuid4
 
 import pytest
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
@@ -32,7 +31,7 @@ class TestSchedulerService:
         return Earthquake(
             location=Location(latitude=37.7749, longitude=-122.4194, depth=10.0),
             magnitude=Magnitude(value=3.5, scale=MagnitudeScale.MOMENT),
-            occurred_at=datetime.now(timezone.utc),
+            occurred_at=datetime.now(UTC),
             source="USGS",
         )
 
@@ -117,13 +116,13 @@ class TestUSGSIngestionJob:
             Earthquake(
                 location=Location(latitude=37.7749, longitude=-122.4194, depth=10.0),
                 magnitude=Magnitude(value=3.5, scale=MagnitudeScale.MOMENT),
-                occurred_at=datetime.now(timezone.utc),
+                occurred_at=datetime.now(UTC),
                 source="USGS",
             ),
             Earthquake(
                 location=Location(latitude=40.7589, longitude=-73.9851, depth=5.0),
                 magnitude=Magnitude(value=2.1, scale=MagnitudeScale.RICHTER),
-                occurred_at=datetime.now(timezone.utc),
+                occurred_at=datetime.now(UTC),
                 source="USGS",
             ),
         ]

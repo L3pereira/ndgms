@@ -5,9 +5,8 @@ Tests all API endpoints with detailed analysis and edge cases
 """
 
 import asyncio
-import json
 from datetime import datetime
-from typing import Any, Dict, List
+from typing import Any
 
 import httpx
 
@@ -33,7 +32,7 @@ class ComprehensiveAPITester:
                 data = response.json()
                 self.access_token = data["access_token"]
                 self.refresh_token = data.get("refresh_token")
-                print(f"✅ Authentication successful")
+                print("✅ Authentication successful")
                 print(f"   Access token: {self.access_token[:20]}...")
                 if self.refresh_token:
                     print(f"   Refresh token: {self.refresh_token[:20]}...")
@@ -54,9 +53,9 @@ class ComprehensiveAPITester:
         path: str,
         description: str,
         requires_auth: bool = True,
-        json_data: Dict = None,
+        json_data: dict = None,
         expected_status: int = 200,
-    ) -> Dict[str, Any]:
+    ) -> dict[str, Any]:
         """Test a single endpoint with detailed analysis"""
         url = f"{self.base_url}{path}"
         print(f"🧪 Testing {method.upper()} {path}")
@@ -90,7 +89,7 @@ class ComprehensiveAPITester:
                 if response.status_code < 400:
                     try:
                         result["data"] = response.json()
-                    except:
+                    except Exception:
                         result["text"] = (
                             response.text[:200] + "..."
                             if len(response.text) > 200
@@ -113,11 +112,11 @@ class ComprehensiveAPITester:
                 if result["success"] and "data" in result:
                     if isinstance(result["data"], dict):
                         if "total" in str(result["data"]):
-                            print(f"      📊 Contains data counts")
+                            print("      📊 Contains data counts")
                         if "earthquakes" in str(result["data"]):
-                            print(f"      🌍 Contains earthquake data")
+                            print("      🌍 Contains earthquake data")
                         if "access_token" in result["data"]:
-                            print(f"      🔑 Contains authentication token")
+                            print("      🔑 Contains authentication token")
                     elif isinstance(result["data"], list):
                         print(f"      📋 List with {len(result['data'])} items")
 
@@ -235,7 +234,7 @@ class ComprehensiveAPITester:
             "source": "TEST_API",
         }
 
-        create_result = await self.test_endpoint(
+        await self.test_endpoint(
             "POST",
             "/api/v1/earthquakes/",
             "Create new earthquake record",
@@ -366,7 +365,7 @@ class ComprehensiveAPITester:
         )
         failed_tests = total_tests - successful_tests
 
-        print(f"📈 OVERALL STATISTICS:")
+        print("📈 OVERALL STATISTICS:")
         print(f"   Total endpoints tested: {total_tests}")
         print(f"   ✅ Successful: {successful_tests}")
         print(f"   ❌ Failed: {failed_tests}")
@@ -395,7 +394,7 @@ class ComprehensiveAPITester:
             ],
         }
 
-        print(f"\n📋 RESULTS BY CATEGORY:")
+        print("\n📋 RESULTS BY CATEGORY:")
         for category, results in categories.items():
             if results:
                 success_count = sum(1 for r in results if r.get("success", False))
@@ -404,7 +403,7 @@ class ComprehensiveAPITester:
                     f"   {category:15} {success_count:2}/{total_count:2} ({'✅' if success_count == total_count else '⚠️ '})"
                 )
 
-        print(f"\n📝 DETAILED ENDPOINT RESULTS:")
+        print("\n📝 DETAILED ENDPOINT RESULTS:")
         for result in self.detailed_results:
             status_icon = "✅" if result.get("success", False) else "❌"
             endpoint = result["endpoint"]
@@ -418,7 +417,7 @@ class ComprehensiveAPITester:
             r for r in self.detailed_results if not r.get("success", False)
         ]
         if failed_endpoints:
-            print(f"\n❌ FAILED ENDPOINTS ANALYSIS:")
+            print("\n❌ FAILED ENDPOINTS ANALYSIS:")
             for result in failed_endpoints:
                 endpoint = result["endpoint"]
                 error = result.get(
@@ -428,7 +427,7 @@ class ComprehensiveAPITester:
                 print(f"     Error: {error}")
 
         # Case study requirements check
-        print(f"\n✅ CASE STUDY REQUIREMENTS VERIFICATION:")
+        print("\n✅ CASE STUDY REQUIREMENTS VERIFICATION:")
         requirements = {
             "OAuth2 Authentication": any(
                 "/auth/" in r["endpoint"] and r.get("success")
@@ -464,23 +463,21 @@ class ComprehensiveAPITester:
             status = "✅ IMPLEMENTED" if met else "❌ MISSING"
             print(f"   {requirement:25} {status}")
 
-        print(f"\n🎯 INTERVIEW EVALUATION SUMMARY:")
-        print(
-            f"   • System demonstrates clean architecture with separation of concerns"
-        )
-        print(f"   • OAuth2/JWT authentication implemented")
-        print(f"   • RESTful API with filtering and pagination")
-        print(f"   • USGS data ingestion capability")
-        print(f"   • Comprehensive error handling and logging")
-        print(f"   • Docker containerization working")
-        print(f"   • API documentation available")
+        print("\n🎯 INTERVIEW EVALUATION SUMMARY:")
+        print("   • System demonstrates clean architecture with separation of concerns")
+        print("   • OAuth2/JWT authentication implemented")
+        print("   • RESTful API with filtering and pagination")
+        print("   • USGS data ingestion capability")
+        print("   • Comprehensive error handling and logging")
+        print("   • Docker containerization working")
+        print("   • API documentation available")
 
         if successful_tests / total_tests >= 0.8:
-            print(f"   🌟 STRONG implementation ready for production discussion")
+            print("   🌟 STRONG implementation ready for production discussion")
         elif successful_tests / total_tests >= 0.6:
-            print(f"   👍 GOOD implementation with minor issues to discuss")
+            print("   👍 GOOD implementation with minor issues to discuss")
         else:
-            print(f"   ⚠️  NEEDS REVIEW - several components require attention")
+            print("   ⚠️  NEEDS REVIEW - several components require attention")
 
 
 async def main():

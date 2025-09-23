@@ -1,18 +1,9 @@
 """Integration tests for WebSocket + Database consistency."""
 
 import asyncio
-import json
-from datetime import datetime, timezone
-from unittest.mock import AsyncMock
 
 import pytest
-import websockets
-from fastapi.testclient import TestClient
 from sqlalchemy import text
-
-from src.domain.entities.earthquake import Earthquake
-from src.domain.entities.location import Location
-from src.domain.entities.magnitude import Magnitude, MagnitudeScale
 
 
 class TestWebSocketDatabaseIntegration:

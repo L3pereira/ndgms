@@ -1,5 +1,5 @@
 import logging
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
 from typing import TYPE_CHECKING
 
 from src.domain.events.earthquake_detected import EarthquakeDetected
@@ -57,7 +57,7 @@ class EarthquakeEventHandlers:
                         "depth": earthquake.location.depth,
                         "occurred_at": earthquake.occurred_at.isoformat(),
                         "source": earthquake.source,
-                        "timestamp": datetime.now(timezone.utc).isoformat(),
+                        "timestamp": datetime.now(UTC).isoformat(),
                         "alert_level": earthquake.magnitude.get_alert_level(),
                     },
                 }
@@ -118,7 +118,7 @@ class EarthquakeEventHandlers:
                         "requires_immediate_response": earthquake.requires_immediate_alert(),
                         "occurred_at": earthquake.occurred_at.isoformat(),
                         "source": earthquake.source,
-                        "timestamp": datetime.now(timezone.utc).isoformat(),
+                        "timestamp": datetime.now(UTC).isoformat(),
                     },
                 }
 
@@ -155,7 +155,7 @@ class EarthquakeEventHandlers:
         """Send recent earthquakes list to WebSocket clients with filtering."""
         try:
             # Get recent earthquakes from last 24 hours
-            end_time = datetime.now(timezone.utc)
+            end_time = datetime.now(UTC)
             start_time = end_time - timedelta(hours=24)
 
             repository = await self._get_repository()
@@ -184,7 +184,7 @@ class EarthquakeEventHandlers:
                         "start": start_time.isoformat(),
                         "end": end_time.isoformat(),
                     },
-                    "timestamp": datetime.now(timezone.utc).isoformat(),
+                    "timestamp": datetime.now(UTC).isoformat(),
                 },
             }
 
@@ -197,7 +197,7 @@ class EarthquakeEventHandlers:
         """Send high magnitude earthquakes list to WebSocket clients."""
         try:
             # Get high magnitude earthquakes from last 7 days
-            end_time = datetime.now(timezone.utc)
+            end_time = datetime.now(UTC)
             start_time = end_time - timedelta(days=7)
 
             repository = await self._get_repository()
@@ -229,7 +229,7 @@ class EarthquakeEventHandlers:
                         "end": end_time.isoformat(),
                     },
                     "min_magnitude": 5.0,
-                    "timestamp": datetime.now(timezone.utc).isoformat(),
+                    "timestamp": datetime.now(UTC).isoformat(),
                 },
             }
 
