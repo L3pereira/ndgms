@@ -191,6 +191,7 @@ curl -X GET "http://localhost:8000/api/v1/earthquakes" \
 | Method | Endpoint | Description | Auth Required |
 |--------|----------|-------------|---------------|
 | `GET` | `/health` | System health check | ❌ |
+| `POST` | `/api/v1/scheduler/start` | Start earthquake data scheduler (required for real-time ingestion) | ✅ |
 | `GET` | `/test-scheduler` | Check scheduler status and job details | ❌ |
 
 ### **Filtering Examples**
@@ -288,13 +289,13 @@ graph TB
 ```mermaid
 sequenceDiagram
     participant USGS as 🌍 USGS API<br/>earthquake.usgs.gov
-    participant Scheduler as ⏰ Scheduler/Trigger<br/>ingestion.router<br/>Manual/Cron Job
+    participant Scheduler as ⏰ Scheduler/Trigger<br/>ingestion.router<br/>Manual Start Required
     participant USGSService as 🔌 USGS Service<br/>USGSService<br/>httpx.AsyncClient
     participant UseCase as ⚙️ Ingestion Use Case<br/>IngestEarthquakeDataUseCase<br/>ScheduledIngestionUseCase
     participant Repository as 📊 Repository<br/>EarthquakeRepository<br/>PostgreSQLEarthquakeRepository
     participant PostgreSQL as 🗄️ PostgreSQL<br/>earthquakes table<br/>PostGIS functions
     participant Events as 📨 Event Publisher<br/>InMemoryEventPublisher<br/>EarthquakeEventHandlers
-    participant WebSocket as 📡 WebSocket Manager<br/>WebSocketManager<br/>broadcast methods
+    participant WebSocket as 📡 WebSocket Manager<br/>WebSocketManager + FilterService<br/>filtered broadcasts with delays
     participant Client as 💻 Frontend Client<br/>WebSocket connection<br/>Real-time UI
 
     Note over USGS,Client: Real-time Earthquake Data Ingestion Flow
@@ -319,7 +320,9 @@ sequenceDiagram
         end
 
         Events->>+WebSocket: broadcast_earthquake_update()
-        WebSocket->>Client: Real-time notification
+        Note over Events,WebSocket: WebSocket filtering applied<br/>(magnitude, age, rate limiting)
+        WebSocket->>Client: Real-time notification (with title)
+        Note over WebSocket: 150ms delay between broadcasts<br/>to prevent message dropping
         WebSocket-->>-Events: sent
         Events-->>-UseCase: events published
     end

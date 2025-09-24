@@ -14,6 +14,9 @@ class Earthquake:
     occurred_at: datetime
     source: str = "USGS"
     earthquake_id: str = field(default_factory=lambda: str(uuid4()))
+    external_id: str | None = field(default=None)
+    raw_data: str | None = field(default=None)
+    title: str | None = field(default=None)
     _is_reviewed: bool = field(default=False, init=False)
 
     def __post_init__(self):

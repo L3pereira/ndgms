@@ -44,7 +44,7 @@ async def register_user(
             last_login=user.last_login,
         )
     except ValueError as e:
-        raise ValidationError(str(e))
+        raise ValidationError(field="user_data", message=str(e))
 
 
 @router.post("/login", response_model=TokenResponse)

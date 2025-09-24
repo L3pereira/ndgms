@@ -11,4 +11,5 @@ class EarthquakeDetected:
     longitude: float
     depth: float
     source: str
+    title: str | None = None
     timestamp: datetime = field(default_factory=lambda: datetime.now(UTC))

@@ -23,6 +23,8 @@ docker-compose -f docker/docker-compose.yml up --build -d
 
 **Wait ~2-3 minutes for services to start...**
 
+> **Important**: After services start, you must manually start the earthquake data scheduler using the API endpoint below for real-time data ingestion.
+
 > **Note**: The `.env.prod` file contains all necessary defaults for testing. For production deployment, update the secret keys and database credentials.
 
 ## 🧪 **Beyond Gravity Interview - Comprehensive Test Suite**
@@ -36,7 +38,7 @@ source .venv/bin/activate
 # Run comprehensive API test (95.2% success rate)
 python test_comprehensive_api.py
 
-# Test WebSocket real-time integration
+# Test WebSocket real-time integration (starts scheduler automatically)
 python test_websocket_integration.py
 ```
 
@@ -118,9 +120,13 @@ curl -X POST "http://localhost:8000/api/v1/ingestion/trigger" \
   -d '{"source": "USGS", "period": "day", "magnitude_filter": "4.5"}'
 ```
 
-### 6. **Check Automated Scheduler Status**
+### 6. **Start the Earthquake Data Scheduler**
 ```bash
-# Monitor the automated ingestion scheduler
+# Start the automated ingestion scheduler (required for real-time data)
+curl -X POST "http://localhost:8000/api/v1/scheduler/start" \
+  -H "Authorization: Bearer YOUR_TOKEN"
+
+# Check scheduler status
 curl -X GET "http://localhost:8000/test-scheduler"
 
 # Expected: Shows scheduler running status and job details

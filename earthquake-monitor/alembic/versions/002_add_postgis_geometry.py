@@ -13,7 +13,7 @@ from alembic import op
 
 # revision identifiers, used by Alembic.
 revision = "002_add_postgis_geometry"
-down_revision = "abc123def456"
+down_revision = "001_initial_tables"
 branch_labels = None
 depends_on = None
 

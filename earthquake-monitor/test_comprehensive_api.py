@@ -369,7 +369,7 @@ class ComprehensiveAPITester:
         print(f"   Total endpoints tested: {total_tests}")
         print(f"   ✅ Successful: {successful_tests}")
         print(f"   ❌ Failed: {failed_tests}")
-        print(f"   📊 Success rate: {(successful_tests/total_tests)*100:.1f}%")
+        print(f"   📊 Success rate: {(successful_tests / total_tests) * 100:.1f}%")
 
         # Category breakdown
         categories = {
@@ -440,9 +440,8 @@ class ComprehensiveAPITester:
                 for r in self.detailed_results
             ),
             "GET /earthquakes/{id}": any(
-                "/earthquakes/" in r["endpoint"]
-                and "GET" in r["endpoint"]
-                and "/" in r["endpoint"].split("/earthquakes/")[1]
+                r["endpoint"].startswith("GET /api/v1/earthquakes/")
+                and len(r["endpoint"].split("/earthquakes/")[1]) > 0
                 and r.get("success")
                 for r in self.detailed_results
             ),

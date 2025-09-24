@@ -38,16 +38,28 @@ class Location:
     def is_near_populated_area(self) -> bool:
         """Check if location is near a populated area.
 
-        Note: This method provides a basic implementation for backward compatibility.
-        For more accurate results, use PopulationService directly.
+        Note: This is a simplified implementation for backward compatibility.
+        For production use, inject a PopulationServiceInterface implementation.
+
+        This method uses basic heuristics based on proximity to major population centers.
         """
-        # Basic implementation using default population centers
-        from ..services.population_config import PopulationCenterConfig
+        # Simplified implementation using well-known major population center coordinates
+        # This removes the dependency on infrastructure layer
+        major_population_centers = [
+            (40.7128, -74.0060, 50),  # New York City (50km radius)
+            (34.0522, -118.2437, 40),  # Los Angeles (40km radius)
+            (41.8781, -87.6298, 35),  # Chicago (35km radius)
+            (29.7604, -95.3698, 30),  # Houston (30km radius)
+            (33.4484, -112.0740, 25),  # Phoenix (25km radius)
+            (39.9526, -75.1652, 30),  # Philadelphia (30km radius)
+            (29.4241, -98.4936, 25),  # San Antonio (25km radius)
+            (32.7767, -96.7970, 30),  # Dallas (30km radius)
+            (37.7749, -122.4194, 35),  # San Francisco (35km radius)
+            (47.6062, -122.3321, 25),  # Seattle (25km radius)
+        ]
 
-        population_centers = PopulationCenterConfig.get_default_population_centers()
-
-        for center in population_centers:
-            center_location = Location(center.latitude, center.longitude, 0)
-            if self.distance_to(center_location) < center.proximity_threshold_km:
+        for lat, lng, radius_km in major_population_centers:
+            center_location = Location(lat, lng, 0)
+            if self.distance_to(center_location) < radius_km:
                 return True
         return False

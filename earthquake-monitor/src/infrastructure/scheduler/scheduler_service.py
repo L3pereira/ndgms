@@ -29,6 +29,14 @@ async def ingest_usgs_data_async() -> None:
             period=period, magnitude=magnitude
         )
 
+        # Limit the number of earthquakes to prevent huge datasets
+        max_earthquakes = int(os.getenv("USGS_INGESTION_MAX_EARTHQUAKES", "100"))
+        if len(earthquakes) > max_earthquakes:
+            logger.warning(
+                f"USGS returned {len(earthquakes)} earthquakes, limiting to {max_earthquakes}"
+            )
+            earthquakes = earthquakes[:max_earthquakes]
+
         # Use proper application layer with event publishing
         from src.application.use_cases.ingest_earthquake_data import (
             IngestEarthquakeDataUseCase,
@@ -38,14 +46,14 @@ async def ingest_usgs_data_async() -> None:
         from src.presentation.main import get_event_publisher
 
         processed_count = 0
-        # Use async context manager for proper session handling
+
+        # ✅ Clean async context manager for DB session
         async with get_async_session_for_background() as session:
             earthquake_repo: EarthquakeRepository = await create_earthquake_repository(
                 session
             )
             event_publisher = get_event_publisher()
 
-            # Use the proper use case that publishes domain events
             ingest_use_case = IngestEarthquakeDataUseCase(
                 repository=earthquake_repo, event_publisher=event_publisher
             )
@@ -56,9 +64,10 @@ async def ingest_usgs_data_async() -> None:
 
             # Commit all changes
             await session.commit()
-            logger.info(
-                f"USGS ingestion completed: processed {processed_count} earthquakes"
-            )
+
+        logger.info(
+            f"USGS ingestion completed: processed {processed_count} earthquakes"
+        )
 
     except Exception as e:
         logger.error(f"USGS data ingestion failed: {e}")
@@ -83,16 +92,15 @@ class SchedulerService:
 
         interval_minutes = float(os.getenv("USGS_INGESTION_INTERVAL_MINUTES", "30"))
 
-        # Add async function directly to scheduler with proper configuration
         self.scheduler.add_job(
-            ingest_usgs_data_async,  # Direct async function reference
+            ingest_usgs_data_async,
             "interval",
             minutes=interval_minutes,
             id="usgs_ingestion",
             name="USGS Earthquake Data Ingestion",
-            max_instances=1,  # Prevent overlapping executions
-            coalesce=True,  # Combine missed executions
-            misfire_grace_time=300,  # 5 minute grace period
+            max_instances=1,
+            coalesce=True,
+            misfire_grace_time=300,
         )
         self._jobs_added = True
         logger.info(f"Added USGS ingestion job with {interval_minutes}-minute interval")
@@ -111,32 +119,23 @@ class SchedulerService:
         if not self.scheduler.running:
             return
 
-        # For AsyncIOScheduler, we should shutdown and wait for it to complete
         self.scheduler.shutdown(wait=False)
 
-        # Give it a moment to actually stop
         import asyncio
 
         await asyncio.sleep(0.1)
 
-        # Don't reset jobs flag - jobs should persist through stop/start cycles
         logger.info("AsyncIO scheduler stopped")
 
     async def restart(self) -> None:
         """Restart the scheduler and re-add jobs."""
         await self.stop()
 
-        # Create a new scheduler instance since shutdown clears everything
-        from apscheduler.executors.asyncio import AsyncIOExecutor
-        from apscheduler.schedulers.asyncio import AsyncIOScheduler
-
         self.scheduler = AsyncIOScheduler(
             executors={"default": AsyncIOExecutor()}, timezone="UTC"
         )
 
-        # Re-add jobs if they were previously added
         if self._jobs_added:
-            # Reset the flag so we can re-add the jobs
             self._jobs_added = False
             await self.add_usgs_ingestion_job()
 
@@ -188,7 +187,6 @@ async def get_scheduler_service() -> SchedulerService:
 
     if _global_scheduler_service is None:
         _global_scheduler_service = SchedulerService()
-        # Add the ingestion job during initialization
         await _global_scheduler_service.add_usgs_ingestion_job()
 
     return _global_scheduler_service
@@ -197,7 +195,7 @@ async def get_scheduler_service() -> SchedulerService:
 async def start_scheduler() -> None:
     """Start the global scheduler service."""
     scheduler_service = await get_scheduler_service()
-    scheduler_service.start()  # Note: start() is now synchronous
+    scheduler_service.start()
 
 
 async def stop_scheduler() -> None:
@@ -206,4 +204,3 @@ async def stop_scheduler() -> None:
 
     if _global_scheduler_service is not None:
         await _global_scheduler_service.stop()
-        # Don't set to None - keep the instance for restart capability

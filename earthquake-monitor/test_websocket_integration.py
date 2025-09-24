@@ -58,6 +58,35 @@ class IntegrationTester:
                 print(f"❌ Failed to get scheduler status: {response.text}")
                 return False
 
+    async def start_scheduler(self):
+        """Start the scheduler via API endpoint"""
+        print("🚀 Starting scheduler...")
+        async with httpx.AsyncClient() as client:
+            response = await client.post("http://localhost:8000/scheduler/start")
+
+            if response.status_code == 200:
+                data = response.json()
+                status = data.get("status", "unknown")
+                message = data.get("message", "")
+
+                if status == "started":
+                    print("✅ Scheduler started successfully!")
+                elif status == "already_running":
+                    print("✅ Scheduler was already running!")
+                else:
+                    print(f"⚠️  Scheduler status: {status} - {message}")
+
+                job_details = data.get("job_details", {})
+                usgs_job = job_details.get("usgs_ingestion", {})
+                if usgs_job:
+                    print(f"   Next run: {usgs_job.get('next_run', 'N/A')}")
+                    print(f"   Trigger: {usgs_job.get('trigger', 'N/A')}")
+
+                return True
+            else:
+                print(f"❌ Failed to start scheduler: {response.text}")
+                return False
+
     async def get_current_earthquake_count(self):
         """Get current number of earthquakes in database"""
         async with httpx.AsyncClient() as client:
@@ -82,6 +111,13 @@ class IntegrationTester:
         try:
             async with websockets.connect(uri) as websocket:
                 print("✅ WebSocket connected!")
+
+                # Start the scheduler after WebSocket connection
+                scheduler_started = await self.start_scheduler()
+                if not scheduler_started:
+                    print(
+                        "❌ Failed to start scheduler, continuing with test anyway..."
+                    )
 
                 # Subscribe to both earthquake events and alerts
                 await websocket.send(json.dumps({"action": "subscribe_earthquakes"}))
@@ -150,6 +186,7 @@ class IntegrationTester:
             magnitude = data.get("magnitude", 0)
             latitude = data.get("latitude", 0)
             longitude = data.get("longitude", 0)
+            title = data.get("title")
 
             # Check if this is a NEW earthquake
             is_new = earthquake_id not in self.earthquake_ids_seen
@@ -160,6 +197,8 @@ class IntegrationTester:
             print(
                 f"[{timestamp}] 🌍 {status} Earthquake: M{magnitude:.1f} at ({latitude:.2f}, {longitude:.2f})"
             )
+            if title:
+                print(f"          📋 {title}")
             print(f"          ID: {earthquake_id}")
 
             if not is_new:
@@ -201,9 +240,12 @@ async def main():
     print("🧪 COMPLETE SCHEDULER + WEBSOCKET INTEGRATION TEST")
     print("=" * 60)
     print("Testing:")
+    print("• Manual scheduler start after WebSocket connection")
     print("• 20-second scheduler interval (USGS_INGESTION_INTERVAL_MINUTES=0.33)")
     print("• Database-driven WebSocket events (no duplicate data)")
-    print("• Clean Architecture flow: Scheduler → Use Cases → Events → WebSocket")
+    print(
+        "• Clean Architecture flow: WebSocket → Scheduler → Use Cases → Events → WebSocket"
+    )
     print("• Magnitude-based filtering and alerts")
     print()
 
@@ -213,11 +255,8 @@ async def main():
         # Step 1: Authenticate
         await tester.authenticate()
 
-        # Step 2: Check scheduler
-        scheduler_running = await tester.check_scheduler_status()
-        if not scheduler_running:
-            print("❌ Scheduler is not running! Please check the container.")
-            return
+        # Step 2: Check initial scheduler status (will be started during WebSocket connection)
+        await tester.check_scheduler_status()
 
         # Step 3: Get baseline earthquake count
         initial_count = await tester.get_current_earthquake_count()

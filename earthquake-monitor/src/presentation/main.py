@@ -11,6 +11,7 @@ from fastapi.responses import JSONResponse
 
 from src.application.events.event_handlers import EarthquakeEventHandlers
 from src.application.events.event_publisher import InMemoryEventPublisher
+from src.application.services.websocket_filter_service import WebSocketFilterService
 from src.domain.events.earthquake_detected import EarthquakeDetected
 from src.domain.events.high_magnitude_alert import HighMagnitudeAlert
 from src.domain.exceptions import DomainException
@@ -34,32 +35,20 @@ async def lifespan(app):
     print("🔥 LIFESPAN STARTUP")
     logger.info("Starting earthquake monitor application...")
 
-    # Initialize scheduler service with dependency injection
+    # Initialize scheduler service but don't start it automatically
+    # Scheduler will only start when explicitly called via /scheduler/start endpoint
     scheduler_enabled = os.getenv("SCHEDULER_ENABLED", "true").lower() == "true"
     logger.info(f"Scheduler enabled: {scheduler_enabled}")
 
     if scheduler_enabled:
-        try:
-            from src.infrastructure.scheduler.scheduler_service import (
-                get_scheduler_service,
-                start_scheduler,
-            )
-
-            logger.info("Starting background scheduler service...")
-            await start_scheduler()
-            scheduler_service = await get_scheduler_service()
-            logger.info("Background scheduler service started successfully")
-        except Exception as e:
-            logger.error(
-                f"Failed to start background scheduler service: {e}", exc_info=True
-            )
-            scheduler_service = None
+        logger.info(
+            "Scheduler is available but not started automatically - use /scheduler/start endpoint"
+        )
     else:
-        logger.info("Background scheduler disabled via SCHEDULER_ENABLED=false")
-        scheduler_service = None
+        logger.info("Scheduler disabled via SCHEDULER_ENABLED=false")
 
-    # Store scheduler service in app state for access during runtime
-    app.state.scheduler_service = scheduler_service
+    # Initialize app state for scheduler service (will be set when started via endpoint)
+    app.state.scheduler_service = None
 
     logger.info("Application startup completed")
 
@@ -69,9 +58,9 @@ async def lifespan(app):
     print("🔥 LIFESPAN SHUTDOWN")
     logger.info("Shutting down earthquake monitor application...")
 
-    if scheduler_service:
+    if hasattr(app.state, "scheduler_service") and app.state.scheduler_service:
         try:
-            await scheduler_service.stop()  # Note: stop() is now async again
+            await app.state.scheduler_service.stop()  # Note: stop() is now async again
             logger.info("Background scheduler service stopped successfully")
         except Exception as e:
             logger.error(
@@ -271,9 +260,14 @@ async def general_exception_handler(request: Request, exc: Exception) -> JSONRes
 event_publisher = InMemoryEventPublisher()
 websocket_manager = websocket.get_websocket_manager()
 
+# Set up WebSocket filtering service
+websocket_filter_service = WebSocketFilterService()
+
 # Note: Event handlers will get repository via dependency injection when needed
 # This avoids sync/async issues during app startup
-event_handlers = EarthquakeEventHandlers(websocket_manager, None)
+event_handlers = EarthquakeEventHandlers(
+    websocket_manager, None, websocket_filter_service
+)
 
 # Subscribe event handlers
 event_publisher.subscribe(EarthquakeDetected, event_handlers.handle_earthquake_detected)
@@ -322,6 +316,59 @@ async def test_scheduler(request: Request):
             return {"scheduler": {"enabled": True, "error": str(e)}}
     else:
         return {"scheduler": {"enabled": False}}
+
+
+@app.post("/scheduler/start")
+async def start_scheduler(request: Request):
+    """Start the scheduler if it's not already running."""
+    scheduler_enabled = os.getenv("SCHEDULER_ENABLED", "true").lower() == "true"
+
+    if not scheduler_enabled:
+        return {
+            "status": "error",
+            "message": "Scheduler is disabled via SCHEDULER_ENABLED environment variable",
+        }
+
+    try:
+        # Check if scheduler already exists and is running
+        if (
+            hasattr(request.app.state, "scheduler_service")
+            and request.app.state.scheduler_service
+            and request.app.state.scheduler_service.scheduler.running
+        ):
+            jobs = request.app.state.scheduler_service.list_jobs()
+            return {
+                "status": "already_running",
+                "message": "Scheduler is already running",
+                "jobs": len(jobs),
+                "job_details": jobs,
+            }
+
+        # Import scheduler functions
+        from src.infrastructure.scheduler.scheduler_service import (
+            get_scheduler_service,
+        )
+        from src.infrastructure.scheduler.scheduler_service import (
+            start_scheduler as start_scheduler_service,
+        )
+
+        # Start the scheduler
+        await start_scheduler_service()
+        scheduler_service = await get_scheduler_service()
+
+        # Store in app state
+        request.app.state.scheduler_service = scheduler_service
+
+        jobs = scheduler_service.list_jobs()
+        return {
+            "status": "started",
+            "message": "Scheduler started successfully",
+            "jobs": len(jobs),
+            "job_details": jobs,
+        }
+
+    except Exception as e:
+        return {"status": "error", "message": f"Failed to start scheduler: {str(e)}"}
 
 
 def get_event_publisher():

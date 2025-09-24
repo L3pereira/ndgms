@@ -48,13 +48,14 @@ class PostgreSQLEarthquakeRepository(EarthquakeRepository):
             magnitude_scale=earthquake.magnitude.scale.value,
             occurred_at=earthquake.occurred_at,
             source=earthquake.source,
-            external_id=getattr(earthquake, "external_id", None),
-            is_reviewed=getattr(earthquake, "is_reviewed", False),
-            raw_data=getattr(earthquake, "raw_data", None),
+            external_id=earthquake.external_id,
+            is_reviewed=earthquake.is_reviewed,
+            raw_data=earthquake.raw_data,
+            title=earthquake.title,
         )
 
         self.session.add(earthquake_model)
-        await self.session.commit()
+        await self.session.commit()  # Commit the transaction to make data visible
         await self.session.refresh(earthquake_model)
 
         return str(earthquake_model.id)
@@ -302,15 +303,14 @@ class PostgreSQLEarthquakeRepository(EarthquakeRepository):
             magnitude=magnitude,
             occurred_at=model.occurred_at,
             source=model.source,
-            earthquake_id=str(model.id),  # Set the earthquake_id field directly
+            earthquake_id=str(model.id),
+            external_id=model.external_id,
+            raw_data=model.raw_data,
+            title=model.title,
         )
 
         # Set additional attributes
         earthquake._is_reviewed = model.is_reviewed
-        if hasattr(model, "external_id") and model.external_id:
-            earthquake.external_id = model.external_id
-        if hasattr(model, "raw_data") and model.raw_data:
-            earthquake.raw_data = model.raw_data
 
         return earthquake
 

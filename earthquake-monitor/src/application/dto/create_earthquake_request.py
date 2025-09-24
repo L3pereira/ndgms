@@ -17,6 +17,7 @@ class CreateEarthquakeRequest:
     source: str = "USGS"
     external_id: str | None = None
     raw_data: str | None = None
+    title: str | None = None
 
     def __post_init__(self) -> None:
         """Set default values after initialization."""

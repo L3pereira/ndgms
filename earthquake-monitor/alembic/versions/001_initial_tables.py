@@ -12,7 +12,7 @@ from sqlalchemy.dialects import postgresql
 from alembic import op
 
 # revision identifiers, used by Alembic.
-revision = "abc123def456"
+revision = "001_initial_tables"
 down_revision = None
 branch_labels = None
 depends_on = None
@@ -35,6 +35,7 @@ def upgrade() -> None:
         sa.Column("external_id", sa.String(length=100), nullable=True),
         sa.Column("is_reviewed", sa.Boolean(), nullable=False),
         sa.Column("raw_data", sa.Text(), nullable=True),
+        sa.Column("title", sa.String(length=500), nullable=True),
         sa.PrimaryKeyConstraint("id"),
     )
     op.create_index(

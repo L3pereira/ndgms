@@ -1,12 +1,24 @@
 from typing import Annotated
 
 from fastapi import Depends
+from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.application.events.event_publisher import EventPublisher
+from src.application.services.earthquake_event_orchestrator import (
+    EarthquakeEventOrchestrator,
+)
 from src.application.use_cases.create_earthquake import CreateEarthquakeUseCase
 from src.application.use_cases.get_earthquake_details import GetEarthquakeDetailsUseCase
 from src.application.use_cases.get_earthquakes import GetEarthquakesUseCase
+from src.domain.repositories.earthquake_reader import EarthquakeReader
 from src.domain.repositories.earthquake_repository import EarthquakeRepository
+from src.domain.repositories.earthquake_search import EarthquakeSearch
+from src.domain.repositories.earthquake_writer import EarthquakeWriter
+from src.domain.services.earthquake_factory_service import EarthquakeFactoryService
+from src.domain.services.earthquake_validation_service import (
+    EarthquakeValidationService,
+)
+from src.infrastructure.database.config import get_async_session
 
 
 # For now, we'll use a mock repository for demonstration
@@ -139,15 +151,16 @@ class MockEarthquakeRepository(EarthquakeRepository):
         return results
 
 
-# Get the appropriate repository dependency function
-def _get_repository_factory():
-    """Delayed import to avoid circular dependency."""
-    from src.infrastructure.factory import get_earthquake_repository_factory
+# Import repository directly to avoid dependency function issues
+def get_earthquake_repository(
+    session: AsyncSession = Depends(get_async_session),
+) -> EarthquakeRepository:
+    """Get earthquake repository instance directly."""
+    from src.infrastructure.repositories.postgresql_earthquake_repository import (
+        PostgreSQLEarthquakeRepository,
+    )
 
-    return get_earthquake_repository_factory()
-
-
-get_earthquake_repository = _get_repository_factory()
+    return PostgreSQLEarthquakeRepository(session)
 
 
 def get_event_publisher() -> EventPublisher:
@@ -156,20 +169,47 @@ def get_event_publisher() -> EventPublisher:
     return get_event_publisher()
 
 
-def get_create_earthquake_use_case(
-    repository: Annotated[EarthquakeRepository, Depends(get_earthquake_repository)],
+def get_earthquake_validation_service() -> EarthquakeValidationService:
+    """Get earthquake validation service."""
+    return EarthquakeValidationService()
+
+
+def get_earthquake_factory_service() -> EarthquakeFactoryService:
+    """Get earthquake factory service."""
+    return EarthquakeFactoryService()
+
+
+def get_earthquake_event_orchestrator(
     event_publisher: Annotated[EventPublisher, Depends(get_event_publisher)],
+) -> EarthquakeEventOrchestrator:
+    """Get earthquake event orchestrator."""
+    return EarthquakeEventOrchestrator(event_publisher)
+
+
+def get_create_earthquake_use_case(
+    earthquake_writer: Annotated[EarthquakeWriter, Depends(get_earthquake_repository)],
+    event_orchestrator: Annotated[
+        EarthquakeEventOrchestrator, Depends(get_earthquake_event_orchestrator)
+    ],
+    validation_service: Annotated[
+        EarthquakeValidationService, Depends(get_earthquake_validation_service)
+    ],
+    factory_service: Annotated[
+        EarthquakeFactoryService, Depends(get_earthquake_factory_service)
+    ],
 ) -> CreateEarthquakeUseCase:
-    return CreateEarthquakeUseCase(repository, event_publisher)
+    return CreateEarthquakeUseCase(
+        earthquake_writer, event_orchestrator, validation_service, factory_service
+    )
 
 
 def get_get_earthquakes_use_case(
-    repository: Annotated[EarthquakeRepository, Depends(get_earthquake_repository)],
+    earthquake_search: Annotated[EarthquakeSearch, Depends(get_earthquake_repository)],
 ) -> GetEarthquakesUseCase:
-    return GetEarthquakesUseCase(repository)
+    return GetEarthquakesUseCase(earthquake_search)
 
 
 def get_get_earthquake_details_use_case(
-    repository: Annotated[EarthquakeRepository, Depends(get_earthquake_repository)],
+    earthquake_reader: Annotated[EarthquakeReader, Depends(get_earthquake_repository)],
 ) -> GetEarthquakeDetailsUseCase:
-    return GetEarthquakeDetailsUseCase(repository)
+    return GetEarthquakeDetailsUseCase(earthquake_reader)

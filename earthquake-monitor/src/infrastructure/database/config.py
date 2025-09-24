@@ -2,6 +2,7 @@
 
 import os
 from collections.abc import AsyncGenerator
+from contextlib import asynccontextmanager
 
 from sqlalchemy import create_engine
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -71,6 +72,7 @@ async def get_async_session() -> AsyncGenerator[AsyncSession, None]:
             await session.close()
 
 
+@asynccontextmanager
 async def get_async_session_for_background() -> AsyncGenerator[AsyncSession, None]:
     """Get async database session for background tasks."""
     async with AsyncSessionLocal() as session:

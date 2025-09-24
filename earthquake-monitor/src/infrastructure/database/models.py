@@ -48,6 +48,7 @@ class EarthquakeModel(Base):
     source = Column(String(50), nullable=False, default="USGS", index=True)
     external_id = Column(String(100), unique=True, index=True)  # USGS event ID
     is_reviewed = Column(Boolean, nullable=False, default=False, index=True)
+    title = Column(String(500), nullable=True)  # USGS descriptive title
 
     # Additional data as JSON
     raw_data = Column(Text)  # Store original USGS JSON data

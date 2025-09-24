@@ -1,4 +1,4 @@
-"""Factory for creating repository implementations based on configuration."""
+"""Factory for creating repository implementations and DI container based on configuration."""
 
 import os
 from typing import Annotated
@@ -8,6 +8,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.domain.repositories.earthquake_repository import EarthquakeRepository
 from src.infrastructure.database.config import get_async_session
+from src.infrastructure.di_container import ApplicationDIContainer, DIContainer
 from src.infrastructure.repositories.postgresql_earthquake_repository import (
     PostgreSQLEarthquakeRepository,
 )
@@ -25,6 +26,11 @@ async def create_earthquake_repository(
     else:
         # Default to mock repository for development/testing
         return MockEarthquakeRepository()
+
+
+def create_di_container(repository: EarthquakeRepository) -> DIContainer:
+    """Create dependency injection container with the given repository."""
+    return ApplicationDIContainer(repository)
 
 
 # For dependency injection in FastAPI
@@ -49,3 +55,27 @@ def get_earthquake_repository_factory():
             return mock_repo_dependency._instance
 
         return mock_repo_dependency
+
+
+def get_di_container_factory():
+    """Get the DI container factory function."""
+    repository_factory = get_earthquake_repository_factory()
+
+    if repository_factory.__name__ == "postgresql_repo_dependency":
+        # For PostgreSQL, we need session dependency
+        async def postgresql_container_dependency(
+            session: Annotated[AsyncSession, Depends(get_async_session)],
+        ) -> DIContainer:
+            repository = PostgreSQLEarthquakeRepository(session)
+            return create_di_container(repository)
+
+        return postgresql_container_dependency
+    else:
+        # For mock repository
+        def mock_container_dependency() -> DIContainer:
+            if not hasattr(mock_container_dependency, "_instance"):
+                repository = MockEarthquakeRepository()
+                mock_container_dependency._instance = create_di_container(repository)
+            return mock_container_dependency._instance
+
+        return mock_container_dependency

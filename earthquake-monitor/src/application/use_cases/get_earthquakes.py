@@ -3,12 +3,12 @@ from src.application.dto.earthquake_dto import (
     PaginatedResponse,
     PaginationParams,
 )
-from src.domain.repositories.earthquake_repository import EarthquakeRepository
+from src.domain.repositories.earthquake_search import EarthquakeSearch
 
 
 class GetEarthquakesUseCase:
-    def __init__(self, earthquake_repository: EarthquakeRepository):
-        self._earthquake_repository = earthquake_repository
+    def __init__(self, earthquake_search: EarthquakeSearch):
+        self._earthquake_search = earthquake_search
 
     async def execute(
         self,
@@ -35,12 +35,10 @@ class GetEarthquakesUseCase:
                 filter_dict["source"] = filters.source
 
         # Get total count for pagination
-        total = await self._earthquake_repository.count_with_filters(
-            filter_dict or None
-        )
+        total = await self._earthquake_search.count_with_filters(filter_dict or None)
 
         # Get paginated results
-        earthquakes = await self._earthquake_repository.find_with_filters(
+        earthquakes = await self._earthquake_search.find_with_filters(
             filters=filter_dict or None, limit=pagination.size, offset=pagination.offset
         )
 

@@ -66,29 +66,27 @@ class IngestEarthquakeDataUseCase:
 
         for earthquake in earthquakes:
             try:
-                # Check if earthquake already exists (by external_id if available)
-                existing_earthquake = None
-                if hasattr(earthquake, "external_id") and earthquake.external_id:
-                    # For now, we'll check by ID since we don't have a find_by_external_id method
-                    # This would be a good enhancement to add to the repository interface
-                    existing_earthquake = await self.repository.find_by_id(
-                        earthquake.id
-                    )
+                # Save earthquake (repository handles duplicate checking by external_id)
+                earthquake_id = await self.repository.save(earthquake)
 
-                if existing_earthquake:
-                    # Update existing earthquake (could implement update logic here)
-                    updated_earthquakes += 1
-                    logger.debug(f"Earthquake {earthquake.id} already exists, skipping")
-                else:
-                    # Save new earthquake
-                    earthquake_id = await self.repository.save(earthquake)
+                # Check if this was a new earthquake or existing one
+                if str(earthquake_id) == str(earthquake.id):
+                    # New earthquake was created
                     earthquake_ids.append(earthquake_id)
                     new_earthquakes += 1
 
-                    # Publish domain events
+                    # Publish domain events only for new earthquakes
                     await self._publish_events(earthquake)
 
-                    logger.debug(f"Successfully ingested earthquake {earthquake_id}")
+                    logger.debug(
+                        f"Successfully ingested new earthquake {earthquake_id}"
+                    )
+                else:
+                    # Existing earthquake was found (repository returned existing ID)
+                    updated_earthquakes += 1
+                    logger.debug(
+                        f"Earthquake with external_id {earthquake.external_id} already exists with ID {earthquake_id}"
+                    )
 
             except Exception as e:
                 errors += 1
@@ -121,6 +119,7 @@ class IngestEarthquakeDataUseCase:
                 depth=earthquake.location.depth,
                 occurred_at=earthquake.occurred_at,
                 source=earthquake.source,
+                title=earthquake.title,
             )
             await self.event_publisher.publish(earthquake_detected)
 
