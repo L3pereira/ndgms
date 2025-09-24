@@ -81,3 +81,5 @@ logs/
 *.pem
 *.key
 *.crt
+
+docs/
