@@ -39,39 +39,7 @@ A comprehensive real-time earthquake monitoring system built with Clean Architec
 
 ## ⚡ Quick Start
 
-### 1. **Clone and Setup**
-```bash
-git clone https://github.com/L3pereira/ndgms.git
-cd ndgms/earthquake-monitor
-
-# Setup virtual environment
-python -m venv .venv
-source .venv/bin/activate  # On Windows: .venv\Scripts\activate
-pip install -r requirements.txt
-```
-
-### 2. **Database Setup**
-```bash
-# Start PostgreSQL (using Docker)
-docker-compose up -d postgres
-
-# Run migrations
-alembic upgrade head
-```
-
-### 3. **Start the API**
-```bash
-# Development server
-uvicorn src.presentation.main:app --reload --host 0.0.0.0 --port 8000
-
-# Or using Docker
-docker-compose up --build
-```
-
-### 4. **Access the API**
-- **API Documentation**: http://localhost:8000/docs
-- **Alternative Docs**: http://localhost:8000/redoc
-- **Health Check**: http://localhost:8000/health
+You can find the detailed Quick Start guide [here](./QUICK_START.md).
 
 ## 🛠️ Installation
 
