@@ -56,6 +56,16 @@ python test_websocket_integration.py
 ```bash
 # Ingest real USGS earthquake data for testing
 ./docker/test-data.sh
+
+# Run websocket
+# Note, when data is fetched from the USGS external API, it is stored in the database.
+# Subsequent fetches will not trigger websocket messages if the data is duplicated.
+# Only new earthquake records (not already in the database) are sent via websocket.
+python test_websocket_integration.py
+
+# Run comprehensive api
+# Runs multiple api endpoints
+python test_comprehensive_api.py
 ```
 
 ## 🛠️ Development Environment (Optional)
