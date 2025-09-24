@@ -35,7 +35,7 @@ docker-compose -f docker/docker-compose.yml up --build -d
 # Activate virtual environment
 source .venv/bin/activate
 
-# Run comprehensive API test (95.2% success rate)
+# Run comprehensive API test
 python test_comprehensive_api.py
 
 # Test WebSocket real-time integration (starts scheduler automatically)

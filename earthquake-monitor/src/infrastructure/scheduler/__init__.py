@@ -1,15 +1,11 @@
 """Scheduler package for background tasks."""
 
 from .scheduler_service import (
-    SchedulerService,
-    get_scheduler_service,
-    start_scheduler,
-    stop_scheduler,
+    APSchedulerService,
+    SchedulerService,  # Backward compatibility alias
 )
 
 __all__ = [
+    "APSchedulerService",
     "SchedulerService",
-    "get_scheduler_service",
-    "start_scheduler",
-    "stop_scheduler",
 ]

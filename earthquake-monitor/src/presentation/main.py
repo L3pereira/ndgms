@@ -306,7 +306,7 @@ async def test_scheduler(request: Request):
             jobs = scheduler_service.list_jobs()
             scheduler_status = {
                 "enabled": True,
-                "running": scheduler_service.scheduler.running,
+                "running": scheduler_service._scheduler.scheduler.running,
                 "jobs": len(jobs),
                 "job_list": list(jobs.keys()),
                 "job_details": jobs,
@@ -334,7 +334,7 @@ async def start_scheduler(request: Request):
         if (
             hasattr(request.app.state, "scheduler_service")
             and request.app.state.scheduler_service
-            and request.app.state.scheduler_service.scheduler.running
+            and request.app.state.scheduler_service._scheduler.scheduler.running
         ):
             jobs = request.app.state.scheduler_service.list_jobs()
             return {
@@ -344,17 +344,36 @@ async def start_scheduler(request: Request):
                 "job_details": jobs,
             }
 
-        # Import scheduler functions
-        from src.infrastructure.scheduler.scheduler_service import (
-            get_scheduler_service,
-        )
-        from src.infrastructure.scheduler.scheduler_service import (
-            start_scheduler as start_scheduler_service,
+        # Create and configure scheduler service
+        from src.infrastructure.database.config import get_async_session_for_background
+        from src.infrastructure.factory import (
+            create_scheduled_job_service,
+            get_earthquake_repository_factory,
         )
 
-        # Start the scheduler
-        await start_scheduler_service()
-        scheduler_service = await get_scheduler_service()
+        # Get dependencies
+        async with get_async_session_for_background() as session:
+            repository_factory = get_earthquake_repository_factory()
+            if callable(repository_factory):
+                if repository_factory.__name__ == "postgresql_repo_dependency":
+                    repository = await repository_factory(session)
+                else:
+                    repository = repository_factory()
+            else:
+                repository = repository_factory
+
+            event_publisher = get_event_publisher()
+
+            # Create scheduler service with dependencies
+            scheduler_service = await create_scheduled_job_service(
+                session=session,
+                earthquake_repository=repository,
+                event_publisher=event_publisher,
+            )
+
+            # Setup and start the scheduler
+            await scheduler_service.setup_earthquake_ingestion_job()
+            scheduler_service.start_scheduler()
 
         # Store in app state
         request.app.state.scheduler_service = scheduler_service

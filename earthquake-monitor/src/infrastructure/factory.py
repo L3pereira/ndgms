@@ -1,5 +1,6 @@
 """Factory for creating repository implementations and DI container based on configuration."""
 
+import logging
 import os
 from typing import Annotated
 
@@ -13,6 +14,8 @@ from src.infrastructure.repositories.postgresql_earthquake_repository import (
     PostgreSQLEarthquakeRepository,
 )
 from src.presentation.dependencies import MockEarthquakeRepository
+
+logger = logging.getLogger(__name__)
 
 
 async def create_earthquake_repository(
@@ -79,3 +82,45 @@ def get_di_container_factory():
             return mock_container_dependency._instance
 
         return mock_container_dependency
+
+
+async def create_scheduled_job_service(
+    session: AsyncSession, earthquake_repository: EarthquakeRepository, event_publisher
+):
+    """
+    Create a fully configured ScheduledJobService with all dependencies.
+
+    Args:
+        session: Database session
+        earthquake_repository: Repository for earthquake data
+        event_publisher: Event publisher for domain events
+
+    Returns:
+        Configured ScheduledJobService instance
+    """
+    from src.application.services.scheduled_job_service import ScheduledJobService
+    from src.application.use_cases.ingest_earthquake_data import (
+        ScheduledIngestionUseCase,
+    )
+    from src.infrastructure.external.usgs_service import USGSService
+    from src.infrastructure.scheduler.scheduler_service import APSchedulerService
+
+    # Create infrastructure layer components
+    job_scheduler = APSchedulerService()
+    usgs_service = USGSService()
+
+    # Create application layer use case with dependencies
+    scheduled_ingestion_use_case = ScheduledIngestionUseCase(
+        repository=earthquake_repository,
+        event_publisher=event_publisher,
+        usgs_service=usgs_service,
+    )
+
+    # Create application service with injected dependencies
+    scheduled_job_service = ScheduledJobService(
+        job_scheduler=job_scheduler,
+        scheduled_ingestion_use_case=scheduled_ingestion_use_case,
+    )
+
+    logger.info("Created ScheduledJobService with dependency injection")
+    return scheduled_job_service
