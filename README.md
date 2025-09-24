@@ -12,7 +12,7 @@ To provide a unified, real-time monitoring platform that ingests, processes, and
 NDGMS is designed as a modular microservices platform where each natural disaster type has its dedicated monitoring service. This architecture ensures:
 
 
-### 🌊 **Earthquake Monitor** `[PRODUCTION READY]`
+### 🌊 **Earthquake Monitor**
 Real-time earthquake monitoring with USGS data integration.
 
 - **📍 Location**: [`/earthquake-monitor`](./earthquake-monitor/)
