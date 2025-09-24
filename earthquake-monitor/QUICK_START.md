@@ -1,13 +1,13 @@
 # 🚀 Quick Start Guide
 
-This guide will get you up and running with the Earthquake Monitor API in under 5 minutes.
+This guide will get you up and running with the Earthquake Monitor API.
 
 ## 📋 Prerequisites
 
 - Docker & Docker Compose installed
 - 8000 and 5432 ports available
 
-## ⚡ Setup (Under 5 Minutes)
+## ⚡ Setup
 
 ```bash
 # Clone the repository
