@@ -1,0 +1,62 @@
+version: '3.8'
+
+services:
+  # Kafka Infrastructure
+  zookeeper:
+    extends:
+      file: docker-compose.kafka.yml
+      service: zookeeper
+
+  kafka:
+    extends:
+      file: docker-compose.kafka.yml
+      service: kafka
+
+  kafka-ui:
+    extends:
+      file: docker-compose.kafka.yml
+      service: kafka-ui
+
+  # Monitoring Stack
+  prometheus:
+    extends:
+      file: docker-compose.kafka.yml
+      service: prometheus
+
+  grafana:
+    extends:
+      file: docker-compose.kafka.yml
+      service: grafana
+
+  # Data Ingestion Service
+  data-ingestion-service:
+    build:
+      context: ./services/data-ingestion-service
+      dockerfile: Dockerfile
+    container_name: ndgms-data-ingestion
+    ports:
+      - "8000:8000"
+    environment:
+      - KAFKA_BOOTSTRAP_SERVERS=kafka:29092
+      - USGS_GEOJSON_BASE_URL=https://earthquake.usgs.gov/earthquakes/feed/v1.0/summary
+      - USGS_API_TIMEOUT=30
+      - DEBUG=false
+      - LOG_LEVEL=INFO
+    depends_on:
+      kafka:
+        condition: service_healthy
+    networks:
+      - ndgms-network
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "python", "-c", "import httpx; httpx.get('http://localhost:8000/health')"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+networks:
+  ndgms-network:
+    driver: bridge
+
+volumes:
+  grafana-storage:

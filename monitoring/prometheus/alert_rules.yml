@@ -1,0 +1,70 @@
+groups:
+  - name: data_ingestion
+    rules:
+      # Service availability
+      - alert: DataIngestionServiceDown
+        expr: up{job="data-ingestion-service"} == 0
+        for: 30s
+        labels:
+          severity: critical
+          service: data-ingestion
+        annotations:
+          summary: "Data Ingestion Service is down"
+          description: "The data ingestion service has been down for more than 30 seconds."
+
+      # High error rate in ingestion jobs
+      - alert: HighIngestionErrorRate
+        expr: rate(ingestion_jobs_total{status="error"}[5m]) > 0.1
+        for: 2m
+        labels:
+          severity: warning
+          service: data-ingestion
+        annotations:
+          summary: "High error rate in data ingestion"
+          description: "Error rate in ingestion jobs is {{ $value }} errors/sec over the last 5 minutes."
+
+      # USGS API failures
+      - alert: USGSAPIFailures
+        expr: rate(usgs_api_requests_total{status!~"2.."}[5m]) > 0.2
+        for: 1m
+        labels:
+          severity: warning
+          service: data-ingestion
+        annotations:
+          summary: "High failure rate in USGS API requests"
+          description: "USGS API failure rate is {{ $value }} failures/sec over the last 5 minutes."
+
+      # No data ingested for too long
+      - alert: DataIngestionStalled
+        expr: increase(disaster_events_processed_total[10m]) == 0
+        for: 10m
+        labels:
+          severity: critical
+          service: data-ingestion
+        annotations:
+          summary: "Data ingestion has stalled"
+          description: "No disaster events have been processed in the last 10 minutes."
+
+      # Kafka publishing failures
+      - alert: KafkaPublishingFailures
+        expr: rate(kafka_messages_sent_total{status="error"}[5m]) > 0.05
+        for: 2m
+        labels:
+          severity: warning
+          service: data-ingestion
+        annotations:
+          summary: "High failure rate in Kafka message publishing"
+          description: "Kafka publishing failure rate is {{ $value }} failures/sec over the last 5 minutes."
+
+  - name: infrastructure
+    rules:
+      # Kafka consumer lag (placeholder - will be relevant when we have consumers)
+      - alert: KafkaConsumerLag
+        expr: kafka_consumer_lag > 1000
+        for: 1m
+        labels:
+          severity: warning
+          service: kafka
+        annotations:
+          summary: "High Kafka consumer lag"
+          description: "Consumer lag is {{ $value }} messages."
