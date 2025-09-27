@@ -28,6 +28,15 @@ logging.basicConfig(
 logger = logging.getLogger(__name__)
 
 
+# Set up event system early (needed for auto-starting scheduler)
+event_publisher = InMemoryEventPublisher()
+
+
+def get_event_publisher():
+    """Get the global event publisher instance."""
+    return event_publisher
+
+
 @asynccontextmanager
 async def lifespan(app):
     """Handle application startup and shutdown."""
@@ -35,20 +44,70 @@ async def lifespan(app):
     print("🔥 LIFESPAN STARTUP")
     logger.info("Starting earthquake monitor application...")
 
-    # Initialize scheduler service but don't start it automatically
-    # Scheduler will only start when explicitly called via /scheduler/start endpoint
+    # Initialize scheduler service
     scheduler_enabled = os.getenv("SCHEDULER_ENABLED", "true").lower() == "true"
-    logger.info(f"Scheduler enabled: {scheduler_enabled}")
+    scheduler_auto_start = os.getenv("SCHEDULER_AUTO_START", "false").lower() == "true"
+    logger.info(
+        f"Scheduler enabled: {scheduler_enabled}, Auto-start: {scheduler_auto_start}"
+    )
 
-    if scheduler_enabled:
+    # Initialize app state for scheduler service
+    app.state.scheduler_service = None
+
+    if scheduler_enabled and scheduler_auto_start:
+        try:
+            logger.info("🚀 Auto-starting earthquake data scheduler...")
+
+            # Import dependencies here to avoid circular imports
+            from src.infrastructure.database.config import (
+                get_async_session_for_background,
+            )
+            from src.infrastructure.factory import (
+                create_scheduled_job_service,
+                get_earthquake_repository_factory,
+            )
+
+            # Get dependencies and create scheduler service
+            async with get_async_session_for_background() as session:
+                repository_factory = get_earthquake_repository_factory()
+                if callable(repository_factory):
+                    if repository_factory.__name__ == "postgresql_repo_dependency":
+                        repository = await repository_factory(session)
+                    else:
+                        repository = repository_factory()
+                else:
+                    repository = repository_factory
+
+                event_publisher = get_event_publisher()
+
+                # Create and configure scheduler service
+                scheduler_service = await create_scheduled_job_service(
+                    session=session,
+                    earthquake_repository=repository,
+                    event_publisher=event_publisher,
+                )
+
+                # Setup and start the scheduler
+                await scheduler_service.setup_earthquake_ingestion_job()
+                scheduler_service.start_scheduler()
+
+                # Store in app state
+                app.state.scheduler_service = scheduler_service
+
+                logger.info("✅ Earthquake data scheduler started automatically")
+
+        except Exception as e:
+            logger.error(f"❌ Error auto-starting scheduler: {e}", exc_info=True)
+            logger.info(
+                "   Scheduler can still be started manually via /api/v1/scheduler/start endpoint"
+            )
+
+    elif scheduler_enabled:
         logger.info(
-            "Scheduler is available but not started automatically - use /scheduler/start endpoint"
+            "Scheduler is available but not started automatically - use /api/v1/scheduler/start endpoint"
         )
     else:
         logger.info("Scheduler disabled via SCHEDULER_ENABLED=false")
-
-    # Initialize app state for scheduler service (will be set when started via endpoint)
-    app.state.scheduler_service = None
 
     logger.info("Application startup completed")
 
@@ -256,8 +315,7 @@ async def general_exception_handler(request: Request, exc: Exception) -> JSONRes
     return JSONResponse(status_code=500, content={"detail": "Internal server error"})
 
 
-# Set up event system
-event_publisher = InMemoryEventPublisher()
+# Set up remaining event system components
 websocket_manager = websocket.get_websocket_manager()
 
 # Set up WebSocket filtering service
@@ -388,7 +446,3 @@ async def start_scheduler(request: Request):
 
     except Exception as e:
         return {"status": "error", "message": f"Failed to start scheduler: {str(e)}"}
-
-
-def get_event_publisher():
-    return event_publisher

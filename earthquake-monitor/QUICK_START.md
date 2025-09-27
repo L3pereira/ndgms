@@ -87,6 +87,74 @@ docker-compose -f docker/docker-compose.dev.yml run --rm test pytest tests/unit/
 docker-compose -f docker/docker-compose.dev.yml run --rm test pytest tests/integration/ -v
 ```
 
+### **Verify Development Environment**
+
+Check if services are running correctly:
+
+```bash
+# Check container status
+docker-compose -f docker/docker-compose.dev.yml ps
+```
+**Expected output:**
+```
+NAME           IMAGE                    COMMAND                  SERVICE   CREATED          STATUS                    PORTS
+docker-app-1   earthquake-monitor:dev   "./startup.sh"           app       19 seconds ago   Up 16 seconds             0.0.0.0:8000->8000/tcp
+docker-db-1    postgis/postgis:15-3.3   "docker-entrypoint.s…"   db        39 seconds ago   Up 18 seconds (healthy)   0.0.0.0:5432->5432/tcp
+```
+
+```bash
+# Check application startup logs
+docker-compose -f docker/docker-compose.dev.yml logs app
+```
+**Expected output:**
+```
+app-1  | 🌍 Starting Earthquake Monitor API...
+app-1  | ⏳ Waiting for PostgreSQL to be ready...
+app-1  | db:5432 - accepting connections
+app-1  | ✅ PostgreSQL is ready!
+app-1  | 🔄 Running database migrations...
+app-1  | ✅ Database migrations completed!
+app-1  | 👤 Creating default admin user...
+app-1  | ✅ Admin user created successfully
+app-1  | 🚀 Starting FastAPI application...
+app-1  | INFO:     Uvicorn running on http://0.0.0.0:8000
+```
+
+```bash
+# Test health endpoint
+curl http://localhost:8000/health
+```
+**Expected output:**
+```json
+{
+  "status": "healthy"
+}
+```
+
+```bash
+# Verify automatic scheduler is working
+curl http://localhost:8000/test-scheduler
+```
+**Expected output:**
+```json
+{
+  "scheduler": {
+    "enabled": true,
+    "running": true,
+    "jobs": 1,
+    "job_list": ["earthquake_ingestion"],
+    "job_details": {
+      "earthquake_ingestion": {
+        "id": "earthquake_ingestion",
+        "name": "Earthquake Data Ingestion",
+        "next_run": "2025-09-27 19:17:02.575441+00:00",
+        "trigger": "interval[0:05:00]"
+      }
+    }
+  }
+}
+```
+
 ## 🧪 Test the System
 
 ### 1. **Health Check**

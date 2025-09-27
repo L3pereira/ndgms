@@ -159,7 +159,7 @@ curl -X GET "http://localhost:8000/api/v1/earthquakes" \
 | Method | Endpoint | Description | Auth Required |
 |--------|----------|-------------|---------------|
 | `GET` | `/health` | System health check | ❌ |
-| `POST` | `/api/v1/scheduler/start` | Start earthquake data scheduler (required for real-time ingestion) | ✅ |
+| `POST` | `/api/v1/scheduler/start` | Manually start earthquake data scheduler (auto-starts by default) | ✅ |
 | `GET` | `/test-scheduler` | Check scheduler status and job details | ❌ |
 
 ### **Filtering Examples**
@@ -257,7 +257,7 @@ graph TB
 ```mermaid
 sequenceDiagram
     participant USGS as 🌍 USGS API<br/>earthquake.usgs.gov
-    participant Scheduler as ⏰ Scheduler/Trigger<br/>ingestion.router<br/>Manual Start Required
+    participant Scheduler as ⏰ Scheduler/Trigger<br/>ingestion.router<br/>Auto-Start Enabled
     participant USGSService as 🔌 USGS Service<br/>USGSService<br/>httpx.AsyncClient
     participant UseCase as ⚙️ Ingestion Use Case<br/>IngestEarthquakeDataUseCase<br/>ScheduledIngestionUseCase
     participant Repository as 📊 Repository<br/>EarthquakeRepository<br/>PostgreSQLEarthquakeRepository
@@ -515,10 +515,10 @@ JWT_ACCESS_TOKEN_EXPIRE_MINUTES=30
 USGS_API_BASE_URL=https://earthquake.usgs.gov/fdsnws/event/1
 USGS_GEOJSON_BASE_URL=https://earthquake.usgs.gov/earthquakes/feed/v1.0/summary
 USGS_API_TIMEOUT=30
-USGS_POLLING_INTERVAL=300
 
 # Automated Scheduler Configuration
 SCHEDULER_ENABLED=true
+SCHEDULER_AUTO_START=true
 USGS_INGESTION_INTERVAL_MINUTES=30
 USGS_INGESTION_MIN_MAGNITUDE=2.5
 USGS_INGESTION_PERIOD=hour
@@ -607,6 +607,7 @@ The system features a robust automated data ingestion scheduler built with depen
 ```bash
 # Scheduler Settings
 SCHEDULER_ENABLED=true                          # Enable/disable scheduled ingestion
+SCHEDULER_AUTO_START=true                       # Auto-start scheduler on app startup (default: false)
 USGS_INGESTION_INTERVAL_MINUTES=30             # Ingestion frequency (default: 30 minutes)
 USGS_INGESTION_MIN_MAGNITUDE=2.5               # Minimum magnitude filter (default: 2.5)
 USGS_INGESTION_PERIOD=hour                     # Time period for data fetch (hour/day/week)
@@ -800,7 +801,6 @@ curl -X POST "http://localhost:8000/api/v1/ingestion/trigger" \
 USGS_API_BASE_URL=https://earthquake.usgs.gov/fdsnws/event/1
 USGS_GEOJSON_BASE_URL=https://earthquake.usgs.gov/earthquakes/feed/v1.0/summary
 USGS_API_TIMEOUT=30
-USGS_POLLING_INTERVAL=300
 ```
 
 #### **Available USGS Feed Options**
